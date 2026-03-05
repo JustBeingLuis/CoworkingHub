@@ -313,12 +313,7 @@ _Diagrama completo de la arquitectura del sistema y diseño de la base de datos,
 
 > **Gestión del proyecto con metodología Scrum**
 
-_Esta sección incluirá:_
-
-- Imagen del sprint actual en Jira
-- Burndown chart
-- User stories en progreso
-- Tareas completadas
+![Product Backlog](backlog.png)
 
 ---
 
