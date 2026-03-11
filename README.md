@@ -7,6 +7,31 @@
 [![MySQL](https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white)](#)
 [![Spring Security](https://img.shields.io/badge/Spring%20Security-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](#)
 
+## ActualizaciÃ³n del Repositorio
+
+El repositorio ahora incluye una implementaciÃ³n base en `Spring Boot` con:
+
+- ConexiÃ³n configurable a PostgreSQL/Supabase por variables de entorno
+- Migraciones Flyway compatibles con PostgreSQL
+- CRUD REST simple para `espacios`
+
+Variables esperadas:
+
+```properties
+DB_URL=jdbc:postgresql://db.<tu-proyecto-supabase>.supabase.co:5432/postgres?sslmode=require
+DB_USERNAME=postgres
+DB_PASSWORD=<tu-password>
+PORT=8080
+```
+
+Endpoints disponibles:
+
+- `GET /api/espacios`
+- `GET /api/espacios/{id}`
+- `POST /api/espacios`
+- `PUT /api/espacios/{id}`
+- `DELETE /api/espacios/{id}`
+
 ---
 
 ## 📋 Tabla de Contenido
