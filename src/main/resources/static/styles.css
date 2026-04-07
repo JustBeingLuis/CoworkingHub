@@ -25,6 +25,10 @@ body {
             linear-gradient(135deg, #f6efe5 0%, #fbfaf7 52%, #eef3f7 100%);
 }
 
+body.modal-open {
+    overflow: hidden;
+}
+
 .layout {
     width: min(1120px, calc(100% - 32px));
     margin: 0 auto;
@@ -478,9 +482,201 @@ body {
     font-size: 1rem;
 }
 
+.space-card-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.space-details-button {
+    width: auto;
+    margin-top: 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 0.92rem;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(19, 34, 56, 0.45);
+    backdrop-filter: blur(8px);
+}
+
+.modal-overlay[hidden] {
+    display: none !important;
+}
+
+.modal-card {
+    position: relative;
+    width: min(920px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    padding: 28px;
+    display: grid;
+    gap: 22px;
+    background: rgba(251, 247, 241, 0.96);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    box-shadow: 0 28px 80px rgba(19, 34, 56, 0.28);
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: auto;
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid rgba(19, 34, 56, 0.14);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.modal-header {
+    padding-right: 108px;
+}
+
+.modal-header-top {
+    display: block;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: clamp(2rem, 3.2vw, 3rem);
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 0.98;
+}
+
+.modal-space-badge {
+    width: fit-content;
+    margin-top: 14px;
+}
+
+.modal-space-meta {
+    margin: 10px 0 0;
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
+.workspace-copy--compact {
+    max-width: none;
+}
+
+.availability-form {
+    display: grid;
+    gap: 16px;
+}
+
+.availability-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.availability-form .primary-button {
+    width: auto;
+    margin-top: 0;
+    justify-self: start;
+}
+
+.availability-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.availability-card {
+    height: 100%;
+}
+
+.availability-card strong {
+    font-size: 1.2rem;
+}
+
+.availability-status {
+    display: grid;
+    gap: 10px;
+}
+
+.availability-status p {
+    margin: 0;
+    color: var(--ink-soft);
+    line-height: 1.5;
+}
+
+.availability-chip {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(19, 34, 56, 0.08);
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.availability-chip--available {
+    background: rgba(31, 122, 82, 0.14);
+    color: var(--success);
+}
+
+.availability-chip--occupied {
+    background: rgba(156, 47, 47, 0.14);
+    color: var(--danger);
+}
+
+.availability-section {
+    display: grid;
+    gap: 12px;
+}
+
+.occupied-slots {
+    display: grid;
+    gap: 12px;
+}
+
+.slot-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(19, 34, 56, 0.08);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.slot-card-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.slot-card-copy strong {
+    font-size: 1rem;
+}
+
+.slot-card-copy span {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+}
+
 .empty-state {
     grid-column: 1 / -1;
     padding: 28px;
+}
+
+.empty-state--compact {
+    padding: 20px;
 }
 
 .empty-state h3 {
@@ -511,5 +707,33 @@ body {
     .summary-grid,
     .spaces-grid {
         grid-template-columns: 1fr;
+    }
+
+    .availability-form-grid,
+    .availability-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .space-card-actions,
+    .modal-header-top,
+    .slot-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .modal-card {
+        max-height: calc(100vh - 24px);
+        padding: 22px;
+    }
+
+    .modal-close-button,
+    .space-details-button,
+    .availability-form .primary-button {
+        width: 100%;
+    }
+
+    .modal-header {
+        padding-right: 0;
+        padding-top: 56px;
     }
 }

@@ -1,6 +1,7 @@
 package com.coworking.reservas.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.coworking.reservas.domain.Espacio;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,6 @@ public interface EspacioRepository extends JpaRepository<Espacio, Long> {
             order by t.nombre asc, e.nombre asc
             """)
     List<Espacio> findEspaciosDisponibles();
+
+    Optional<Espacio> findByIdAndActivoTrue(Long id);
 }

@@ -64,6 +64,73 @@
     </div>
 </section>
 
+<div id="availability-modal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="availability-title">
+        <button id="modal-close-button" type="button" class="modal-close-button">Cerrar</button>
+
+        <div class="modal-header">
+            <p class="section-kicker">Disponibilidad del espacio</p>
+
+            <div class="modal-header-top">
+                <h2 id="availability-title">Detalles del espacio</h2>
+            </div>
+
+            <span id="modal-space-badge" class="space-badge modal-space-badge">Espacio</span>
+
+            <p id="modal-space-copy" class="workspace-copy">
+                Consulta los horarios ocupados del espacio y valida un rango horario para la fecha seleccionada.
+            </p>
+            <p id="modal-space-meta" class="modal-space-meta"></p>
+        </div>
+
+        <form id="availability-form" class="availability-form">
+            <div class="availability-form-grid">
+                <label class="field">
+                    <span>Fecha</span>
+                    <input id="availability-date" type="date" required>
+                </label>
+
+                <label class="field">
+                    <span>Hora de inicio</span>
+                    <input id="availability-start-time" type="time">
+                </label>
+
+                <label class="field">
+                    <span>Hora de fin</span>
+                    <input id="availability-end-time" type="time">
+                </label>
+            </div>
+
+            <button id="availability-submit-button" type="submit" class="primary-button">
+                Consultar disponibilidad
+            </button>
+        </form>
+
+        <p id="availability-message" class="form-message" role="status" aria-live="polite"></p>
+
+        <div id="availability-summary" class="availability-summary-grid">
+            <article class="summary-card availability-card">
+                <span>Estado de la consulta</span>
+                <strong>Pendiente</strong>
+            </article>
+        </div>
+
+        <section class="availability-section">
+            <p class="section-kicker">Horarios ocupados</p>
+            <p class="workspace-copy workspace-copy--compact">
+                Bloques reservados para la fecha consultada en este espacio.
+            </p>
+
+            <div id="occupied-slots" class="occupied-slots">
+                <article class="empty-state empty-state--compact">
+                    <h3>Selecciona una fecha</h3>
+                    <p>Cuando consultes un espacio, aqui apareceran sus horarios ocupados.</p>
+                </article>
+            </div>
+        </section>
+    </div>
+</div>
+
 <script src="/dashboard.js"></script>
 </body>
 </html>

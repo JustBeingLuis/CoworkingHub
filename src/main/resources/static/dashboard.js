@@ -3,13 +3,68 @@ const spacesMessage = document.getElementById("spaces-message");
 const sessionSummary = document.getElementById("session-summary");
 const spacesSummary = document.getElementById("spaces-summary");
 const spacesGrid = document.getElementById("spaces-grid");
+const availabilityModal = document.getElementById("availability-modal");
+const modalCloseButton = document.getElementById("modal-close-button");
+const availabilityForm = document.getElementById("availability-form");
+const availabilityDateInput = document.getElementById("availability-date");
+const availabilityStartInput = document.getElementById("availability-start-time");
+const availabilityEndInput = document.getElementById("availability-end-time");
+const availabilitySubmitButton = document.getElementById("availability-submit-button");
+const availabilityMessage = document.getElementById("availability-message");
+const availabilitySummary = document.getElementById("availability-summary");
+const occupiedSlots = document.getElementById("occupied-slots");
+const modalTitle = document.getElementById("availability-title");
+const modalSpaceBadge = document.getElementById("modal-space-badge");
+const modalSpaceCopy = document.getElementById("modal-space-copy");
+const modalSpaceMeta = document.getElementById("modal-space-meta");
 
 const TOKEN_KEY = "coworking_access_token";
 const LOGIN_URL = "/index.html";
+const spaceCatalog = new Map();
+
+let currentSpaceId = null;
 
 logoutButton.addEventListener("click", () => {
     clearSession();
+    closeAvailabilityModal();
     window.location.assign(LOGIN_URL);
+});
+
+spacesGrid.addEventListener("click", async (event) => {
+    const detailsButton = event.target.closest("[data-space-id]");
+
+    if (!detailsButton) {
+        return;
+    }
+
+    const spaceId = Number(detailsButton.dataset.spaceId);
+
+    if (!Number.isInteger(spaceId)) {
+        return;
+    }
+
+    await openAvailabilityModal(spaceId);
+});
+
+availabilityForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await loadAvailabilityDetails(true);
+});
+
+modalCloseButton.addEventListener("click", () => {
+    closeAvailabilityModal();
+});
+
+availabilityModal.addEventListener("click", (event) => {
+    if (event.target === availabilityModal) {
+        closeAvailabilityModal();
+    }
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !availabilityModal.hidden) {
+        closeAvailabilityModal();
+    }
 });
 
 hydrateSessionState();
@@ -47,14 +102,11 @@ async function refreshWorkspace() {
             if (response.status === 401 || response.status === 403) {
                 clearSession();
                 window.location.replace(LOGIN_URL);
-                return;
             }
-
             return;
         }
 
         renderSessionSummary(data);
-
         await loadSpaces(false);
     } catch (error) {
         sessionSummary.innerHTML = `
@@ -113,11 +165,114 @@ async function loadSpaces(showFeedback = true) {
     }
 }
 
+async function openAvailabilityModal(spaceId) {
+    const espacio = spaceCatalog.get(spaceId);
+
+    if (!espacio) {
+        return;
+    }
+
+    currentSpaceId = spaceId;
+    availabilityForm.reset();
+    availabilityDateInput.value = getTodayDateValue();
+    renderModalHeader(espacio);
+    renderAvailabilityPlaceholder();
+    showMessage(availabilityMessage, "", "");
+    availabilityModal.hidden = false;
+    document.body.classList.add("modal-open");
+
+    await loadAvailabilityDetails(false);
+}
+
+function closeAvailabilityModal() {
+    availabilityModal.hidden = true;
+    document.body.classList.remove("modal-open");
+    currentSpaceId = null;
+    availabilityForm.reset();
+    showMessage(availabilityMessage, "", "");
+}
+
+async function loadAvailabilityDetails(showFeedback = true) {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (!token) {
+        window.location.replace(LOGIN_URL);
+        return;
+    }
+
+    if (!currentSpaceId) {
+        return;
+    }
+
+    const fecha = availabilityDateInput.value;
+    const horaInicio = availabilityStartInput.value;
+    const horaFin = availabilityEndInput.value;
+
+    if (!fecha) {
+        showMessage(availabilityMessage, "Debes seleccionar una fecha para consultar la disponibilidad.", "error");
+        return;
+    }
+
+    if ((horaInicio && !horaFin) || (!horaInicio && horaFin)) {
+        showMessage(availabilityMessage, "Debes diligenciar la hora de inicio y la hora de fin juntas.", "error");
+        return;
+    }
+
+    if (horaInicio && horaFin && horaInicio >= horaFin) {
+        showMessage(availabilityMessage, "La hora de inicio debe ser anterior a la hora de fin.", "error");
+        return;
+    }
+
+    toggleLoading(availabilitySubmitButton, true, "Consultando...");
+
+    try {
+        const params = new URLSearchParams({ fecha });
+
+        if (horaInicio) {
+            params.set("horaInicio", horaInicio);
+            params.set("horaFin", horaFin);
+        }
+
+        const response = await fetch(`/api/espacios/${currentSpaceId}/disponibilidad?${params.toString()}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                clearSession();
+                window.location.replace(LOGIN_URL);
+                return;
+            }
+
+            showMessage(availabilityMessage, data.message || "No fue posible consultar la disponibilidad.", "error");
+            return;
+        }
+
+        renderAvailabilitySummary(data);
+        renderOccupiedSlots(data.horariosOcupados || []);
+
+        if (showFeedback) {
+            showMessage(availabilityMessage, "Consulta realizada correctamente.", "success");
+        } else {
+            showMessage(availabilityMessage, "", "");
+        }
+    } catch (error) {
+        showMessage(availabilityMessage, "No fue posible conectar con el backend.", "error");
+    } finally {
+        toggleLoading(availabilitySubmitButton, false);
+    }
+}
+
 function renderSessionSummary(usuario) {
     sessionSummary.innerHTML = `
-        <strong>${usuario.nombre}</strong>
-        <span>Correo: ${usuario.correo}</span>
-        <span>Rol: ${usuario.rol}</span>
+        <strong>${escapeHtml(usuario.nombre || "")}</strong>
+        <span>Correo: ${escapeHtml(usuario.correo || "")}</span>
+        <span>Rol: ${escapeHtml(usuario.rol || "")}</span>
     `;
 }
 
@@ -143,6 +298,8 @@ function renderSpacesSummary(espacios) {
 }
 
 function renderSpacesGrid(espacios) {
+    spaceCatalog.clear();
+
     if (!espacios || espacios.length === 0) {
         spacesGrid.innerHTML = `
             <article class="empty-state">
@@ -153,15 +310,21 @@ function renderSpacesGrid(espacios) {
         return;
     }
 
+    espacios.forEach((espacio) => {
+        spaceCatalog.set(Number(espacio.id), espacio);
+    });
+
     spacesGrid.innerHTML = espacios.map((espacio) => `
         <article class="space-card">
             <div class="space-card-header">
                 <div>
-                    <h3>${espacio.nombre}</h3>
+                    <h3>${escapeHtml(espacio.nombre || "")}</h3>
                 </div>
-                <span class="space-badge">${espacio.tipo}</span>
+                <span class="space-badge">${escapeHtml(espacio.tipo || "")}</span>
             </div>
-            <p class="space-description">${espacio.descripcionTipo || "Espacio habilitado para reserva dentro del coworking."}</p>
+            <p class="space-description">${escapeHtml(
+                espacio.descripcionTipo || "Espacio habilitado para reserva dentro del coworking."
+            )}</p>
             <div class="space-meta">
                 <div class="space-meta-item">
                     <span>Capacidad</span>
@@ -172,8 +335,123 @@ function renderSpacesGrid(espacios) {
                     <strong>${formatPrice(espacio.precioPorHora)}</strong>
                 </div>
             </div>
+            <div class="space-card-actions">
+                <button type="button" class="secondary-button space-details-button" data-space-id="${espacio.id}">
+                    Detalles
+                </button>
+            </div>
         </article>
     `).join("");
+}
+
+function renderModalHeader(espacio) {
+    modalTitle.textContent = espacio.nombre || "Espacio";
+    modalSpaceBadge.textContent = espacio.tipo || "Espacio";
+    modalSpaceCopy.textContent = espacio.descripcionTipo
+        || "Consulta los horarios ocupados del espacio y valida un rango horario para la fecha seleccionada.";
+    modalSpaceMeta.textContent = `Capacidad: ${espacio.capacidad} persona${espacio.capacidad === 1 ? "" : "s"} | Precio por hora: ${formatPrice(espacio.precioPorHora)}`;
+}
+
+function renderAvailabilityPlaceholder() {
+    availabilitySummary.innerHTML = `
+        <article class="summary-card availability-card">
+            <span>Fecha consultada</span>
+            <strong>${formatDate(getTodayDateValue())}</strong>
+        </article>
+        <article class="summary-card availability-card">
+            <span>Rango consultado</span>
+            <strong>Todo el dia</strong>
+        </article>
+        <article class="summary-card availability-card">
+            <span>Estado</span>
+            <div class="availability-status">
+                <span class="availability-chip">Cargando</span>
+                <p>Estamos consultando la disponibilidad real del espacio.</p>
+            </div>
+        </article>
+    `;
+
+    occupiedSlots.innerHTML = `
+        <article class="empty-state empty-state--compact">
+            <h3>Consultando disponibilidad</h3>
+            <p>En breve veras aqui los horarios ocupados para la fecha seleccionada.</p>
+        </article>
+    `;
+}
+
+function renderAvailabilitySummary(disponibilidad) {
+    const estadoConsulta = buildAvailabilityStatus(disponibilidad);
+    const rangoConsultado = disponibilidad.horaInicioConsulta && disponibilidad.horaFinConsulta
+        ? `${formatTime(disponibilidad.horaInicioConsulta)} - ${formatTime(disponibilidad.horaFinConsulta)}`
+        : "Todo el dia";
+
+    availabilitySummary.innerHTML = `
+        <article class="summary-card availability-card">
+            <span>Fecha consultada</span>
+            <strong>${formatDate(disponibilidad.fecha)}</strong>
+        </article>
+        <article class="summary-card availability-card">
+            <span>Rango consultado</span>
+            <strong>${rangoConsultado}</strong>
+        </article>
+        <article class="summary-card availability-card">
+            <span>Estado</span>
+            <div class="availability-status">
+                <span class="availability-chip ${estadoConsulta.className}">${estadoConsulta.label}</span>
+                <p>${escapeHtml(disponibilidad.mensajeDisponibilidad || "")}</p>
+            </div>
+        </article>
+    `;
+}
+
+function renderOccupiedSlots(horariosOcupados) {
+    if (!horariosOcupados.length) {
+        occupiedSlots.innerHTML = `
+            <article class="empty-state empty-state--compact">
+                <h3>Sin horarios ocupados</h3>
+                <p>Para la fecha seleccionada este espacio no tiene bloques reservados.</p>
+            </article>
+        `;
+        return;
+    }
+
+    occupiedSlots.innerHTML = horariosOcupados.map((horario) => `
+        <article class="slot-card">
+            <div class="slot-card-copy">
+                <strong>${formatTime(horario.horaInicio)} - ${formatTime(horario.horaFin)}</strong>
+                <span>Bloque reservado en el sistema</span>
+            </div>
+            <span class="space-badge">${escapeHtml(horario.estado || "RESERVADO")}</span>
+        </article>
+    `).join("");
+}
+
+function buildAvailabilityStatus(disponibilidad) {
+    if (disponibilidad.rangoConsultadoDisponible === true) {
+        return {
+            label: "Disponible",
+            className: "availability-chip--available"
+        };
+    }
+
+    if (disponibilidad.rangoConsultadoDisponible === false) {
+        return {
+            label: "No disponible",
+            className: "availability-chip--occupied"
+        };
+    }
+
+    if (disponibilidad.totalHorariosOcupados > 0) {
+        return {
+            label: `${disponibilidad.totalHorariosOcupados} bloque(s) ocupado(s)`,
+            className: ""
+        };
+    }
+
+    return {
+        label: "Dia sin ocupacion",
+        className: "availability-chip--available"
+    };
 }
 
 function clearSession() {
@@ -188,7 +466,50 @@ function formatPrice(value) {
     }).format(number)}`;
 }
 
+function formatDate(value) {
+    if (!value) {
+        return "Sin fecha";
+    }
+
+    const date = new Date(`${value}T00:00:00`);
+
+    return new Intl.DateTimeFormat("es-CO", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+    }).format(date);
+}
+
+function formatTime(value) {
+    return String(value || "").slice(0, 5);
+}
+
+function getTodayDateValue() {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${today.getFullYear()}-${month}-${day}`;
+}
+
 function showMessage(target, message, type) {
     target.textContent = message;
     target.className = type ? `form-message ${type}` : "form-message";
+}
+
+function toggleLoading(button, isLoading, loadingText) {
+    if (!button.dataset.defaultText) {
+        button.dataset.defaultText = button.textContent.trim();
+    }
+
+    button.disabled = isLoading;
+    button.textContent = isLoading ? loadingText : button.dataset.defaultText;
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
 }
