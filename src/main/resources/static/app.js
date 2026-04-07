@@ -3,10 +3,11 @@ const loginForm = document.getElementById("login-form");
 const registroButton = document.getElementById("submit-button");
 const loginButton = document.getElementById("login-button");
 const perfilButton = document.getElementById("perfil-button");
+const logoutButton = document.getElementById("logout-button");
 const registroMessage = document.getElementById("registro-message");
 const loginMessage = document.getElementById("login-message");
 const perfilMessage = document.getElementById("perfil-message");
-const tokenPreview = document.getElementById("token-preview");
+const sessionSummary = document.getElementById("session-summary");
 
 const TOKEN_KEY = "coworking_access_token";
 
@@ -33,7 +34,7 @@ registroForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    toggleLoading(registroButton, true, "Registrando...");
+    toggleLoading(registroButton, true, "Creando cuenta...");
 
     try {
         const response = await fetch("/api/usuarios/registro", {
@@ -47,17 +48,17 @@ registroForm.addEventListener("submit", async (event) => {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            showMessage(registroMessage, data.message || "No fue posible registrar el usuario.", "error");
+            showMessage(registroMessage, data.message || "No fue posible crear la cuenta.", "error");
             return;
         }
 
         registroForm.reset();
         document.getElementById("correoLogin").value = data.correo;
-        showMessage(registroMessage, `Usuario ${data.nombre} registrado correctamente con rol ${data.rol}.`, "success");
+        showMessage(registroMessage, `Cuenta creada para ${data.nombre}. Ya puedes iniciar sesion.`, "success");
     } catch (error) {
         showMessage(registroMessage, "No fue posible conectar con el backend.", "error");
     } finally {
-        toggleLoading(registroButton, false, "Registrar usuario");
+        toggleLoading(registroButton, false);
     }
 });
 
@@ -72,7 +73,7 @@ loginForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    toggleLoading(loginButton, true, "Autenticando...");
+    toggleLoading(loginButton, true, "Ingresando...");
 
     try {
         const response = await fetch("/api/auth/login", {
@@ -86,19 +87,19 @@ loginForm.addEventListener("submit", async (event) => {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            showMessage(loginMessage, data.message || "No fue posible autenticar el usuario.", "error");
+            showMessage(loginMessage, data.message || "No fue posible iniciar sesion.", "error");
             return;
         }
 
         localStorage.setItem(TOKEN_KEY, data.accessToken);
-        renderTokenPreview(data.accessToken, data.usuario);
         loginForm.reset();
-        showMessage(loginMessage, `Sesion iniciada correctamente como ${data.usuario.rol}.`, "success");
+        renderSessionSummary(data.usuario);
+        showMessage(loginMessage, `Bienvenido, ${data.usuario.nombre}. Tu sesion ya esta activa.`, "success");
         showMessage(perfilMessage, "", "");
     } catch (error) {
         showMessage(loginMessage, "No fue posible conectar con el backend.", "error");
     } finally {
-        toggleLoading(loginButton, false, "Iniciar sesion");
+        toggleLoading(loginButton, false);
     }
 });
 
@@ -106,60 +107,81 @@ perfilButton.addEventListener("click", async () => {
     const token = localStorage.getItem(TOKEN_KEY);
 
     if (!token) {
-        showMessage(perfilMessage, "No hay token almacenado. Inicia sesion primero.", "error");
+        renderSessionSummary();
+        showMessage(perfilMessage, "No hay una sesion activa en este navegador.", "error");
         return;
     }
 
-    toggleLoading(perfilButton, true, "Consultando...");
+    toggleLoading(perfilButton, true, "Actualizando...");
 
     try {
         const response = await fetch("/api/auth/perfil", {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${token}`
+                Authorization: `Bearer ${token}`
             }
         });
 
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            showMessage(perfilMessage, data.message || "No fue posible consultar el perfil.", "error");
+            if (response.status === 401 || response.status === 403) {
+                clearSession();
+            }
+
+            showMessage(perfilMessage, data.message || "No fue posible consultar la sesion actual.", "error");
             return;
         }
 
-        showMessage(
-            perfilMessage,
-            `Perfil autenticado: ${data.nombre} (${data.correo}) con rol ${data.rol}.`,
-            "success"
-        );
+        renderSessionSummary(data);
+        showMessage(perfilMessage, "La informacion de tu cuenta fue actualizada correctamente.", "success");
     } catch (error) {
         showMessage(perfilMessage, "No fue posible conectar con el backend.", "error");
     } finally {
-        toggleLoading(perfilButton, false, "Consultar perfil protegido");
+        toggleLoading(perfilButton, false);
     }
 });
 
-hydrateTokenPreview();
+logoutButton.addEventListener("click", () => {
+    clearSession();
+    showMessage(loginMessage, "", "");
+    showMessage(registroMessage, "", "");
+    showMessage(perfilMessage, "La sesion se cerro correctamente.", "success");
+});
 
-function hydrateTokenPreview() {
+hydrateSessionState();
+
+function hydrateSessionState() {
     const token = localStorage.getItem(TOKEN_KEY);
 
     if (!token) {
-        tokenPreview.textContent = "Aun no hay token almacenado.";
+        renderSessionSummary();
         return;
     }
 
-    renderTokenPreview(token);
+    perfilButton.click();
 }
 
-function renderTokenPreview(token, usuario) {
-    const preview = [
-        usuario ? `Usuario: ${usuario.nombre}` : null,
-        usuario ? `Rol: ${usuario.rol}` : null,
-        `Token: ${token}`
-    ].filter(Boolean).join("\n");
+function renderSessionSummary(usuario) {
+    if (!usuario) {
+        sessionSummary.innerHTML = `
+            <strong>Sin sesion activa</strong>
+            <span>Inicia sesion para acceder a tus reservas y a tu cuenta.</span>
+        `;
+        return;
+    }
 
-    tokenPreview.textContent = preview;
+    sessionSummary.innerHTML = `
+        <strong>${usuario.nombre}</strong>
+        <span>Correo: ${usuario.correo}</span>
+        <span>Rol: ${usuario.rol}</span>
+        <span>Cuenta activa: ${usuario.activo ? "Si" : "No"}</span>
+    `;
+}
+
+function clearSession() {
+    localStorage.removeItem(TOKEN_KEY);
+    renderSessionSummary();
 }
 
 function showMessage(target, message, type) {

@@ -3,35 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro y Autenticacion | Coworking</title>
+    <title>Sistema de Gestion de Reservas | Coworking</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <main class="layout">
     <section class="hero">
-        <p class="eyebrow">RF01 + RF02 · Registro y autenticacion</p>
-        <h1>Abre tu cuenta, inicia sesion y valida tu acceso.</h1>
+        <p class="eyebrow">Sistema de Gestion de Reservas para Coworking</p>
+        <h1>Reserva escritorios, salas y oficinas desde una sola cuenta.</h1>
         <p class="lead">
-            Esta pantalla implementa los dos primeros requerimientos funcionales del sprint:
-            autoregistro y autenticacion con correo, contrasena y token JWT.
+            Crea tu perfil o inicia sesion para entrar a la plataforma y comenzar a gestionar
+            tus espacios de trabajo compartido con acceso seguro.
         </p>
 
         <div class="info-grid">
             <article class="info-card">
-                <h2>RF01</h2>
+                <h2>Espacios listos para tu jornada</h2>
                 <ul>
-                    <li>Nombre obligatorio.</li>
-                    <li>Correo en formato valido y sin duplicados.</li>
-                    <li>Contrasena de minimo 8 caracteres.</li>
+                    <li>Escritorios individuales para trabajo flexible.</li>
+                    <li>Salas de reuniones para equipos y clientes.</li>
+                    <li>Oficinas privadas para sesiones de mayor concentracion.</li>
                 </ul>
             </article>
 
             <article class="info-card">
-                <h2>RF02</h2>
+                <h2>Acceso rapido y seguro</h2>
                 <ul>
-                    <li>Login con correo y contrasena.</li>
-                    <li>Generacion de token JWT firmado.</li>
-                    <li>Acceso restringido a rutas protegidas.</li>
+                    <li>Registro con correo unico y contrasena segura.</li>
+                    <li>Inicio de sesion con autenticacion protegida.</li>
+                    <li>Sesion persistida para consultar tu cuenta cuando la necesites.</li>
                 </ul>
             </article>
         </div>
@@ -40,9 +40,9 @@
     <section class="panel stack">
         <form id="registro-form" class="form-card" novalidate>
             <div class="form-header">
-                <span class="badge">RF01</span>
-                <h2>Autoregistro</h2>
-                <p>Crea un usuario nuevo para luego autenticarte en la plataforma.</p>
+                <span class="badge">Crear cuenta</span>
+                <h2>Registrate</h2>
+                <p>Completa tus datos para acceder al sistema de reservas.</p>
             </div>
 
             <label class="field">
@@ -65,15 +65,15 @@
                 <input id="confirmacionPassword" name="confirmacionPassword" type="password" minlength="8" placeholder="Repite la contrasena" required>
             </label>
 
-            <button id="submit-button" type="submit" class="primary-button">Registrar usuario</button>
+            <button id="submit-button" type="submit" class="primary-button">Crear mi cuenta</button>
             <p id="registro-message" class="form-message" role="status" aria-live="polite"></p>
         </form>
 
         <form id="login-form" class="form-card" novalidate>
             <div class="form-header">
-                <span class="badge">RF02</span>
-                <h2>Autenticacion</h2>
-                <p>Inicia sesion con correo y contrasena para obtener un token JWT.</p>
+                <span class="badge">Acceso</span>
+                <h2>Inicia sesion</h2>
+                <p>Entra con tu correo y contrasena para continuar con tus reservas.</p>
             </div>
 
             <label class="field">
@@ -86,19 +86,22 @@
                 <input id="passwordLogin" name="passwordLogin" type="password" placeholder="Tu contrasena" required>
             </label>
 
-            <button id="login-button" type="submit" class="primary-button">Iniciar sesion</button>
+            <button id="login-button" type="submit" class="primary-button">Entrar al sistema</button>
             <p id="login-message" class="form-message" role="status" aria-live="polite"></p>
         </form>
 
-        <article class="form-card token-card">
+        <article class="form-card session-card">
             <div class="form-header">
-                <span class="badge">Token</span>
-                <h2>Sesion actual</h2>
-                <p>Usa el token emitido para consultar un recurso protegido del backend.</p>
+                <span class="badge">Mi cuenta</span>
+                <h2>Estado de sesion</h2>
+                <p>Consulta rapidamente si ya estas autenticado y con que perfil ingresaste.</p>
             </div>
 
-            <pre id="token-preview" class="token-preview">Aun no hay token almacenado.</pre>
-            <button id="perfil-button" type="button" class="secondary-button">Consultar perfil protegido</button>
+            <div id="session-summary" class="session-summary">
+                Aun no has iniciado sesion.
+            </div>
+            <button id="perfil-button" type="button" class="secondary-button">Actualizar mi cuenta</button>
+            <button id="logout-button" type="button" class="secondary-button secondary-button--ghost">Cerrar sesion</button>
             <p id="perfil-message" class="form-message" role="status" aria-live="polite"></p>
         </article>
     </section>

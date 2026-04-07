@@ -115,6 +115,10 @@ body {
     width: min(100%, 460px);
 }
 
+.session-card {
+    width: min(100%, 460px);
+}
+
 .form-header {
     margin-bottom: 22px;
 }
@@ -209,6 +213,11 @@ body {
     box-shadow: 0 16px 28px rgba(19, 34, 56, 0.1);
 }
 
+.secondary-button--ghost {
+    margin-top: 12px;
+    background: transparent;
+}
+
 .primary-button:disabled {
     cursor: wait;
     opacity: 0.8;
@@ -230,6 +239,25 @@ body {
     font-family: Consolas, "Courier New", monospace;
     font-size: 0.88rem;
     line-height: 1.55;
+}
+
+.session-summary {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(19, 34, 56, 0.92);
+    color: #f6efe5;
+    line-height: 1.55;
+}
+
+.session-summary strong {
+    font-size: 1rem;
+}
+
+.session-summary span {
+    color: rgba(246, 239, 229, 0.9);
 }
 
 .form-message {
