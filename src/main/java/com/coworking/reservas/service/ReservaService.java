@@ -2,19 +2,24 @@ package com.coworking.reservas.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
 
 import com.coworking.reservas.domain.Espacio;
 import com.coworking.reservas.domain.EstadoReserva;
 import com.coworking.reservas.domain.Reserva;
 import com.coworking.reservas.domain.Usuario;
 import com.coworking.reservas.dto.ReservaCreateRequest;
+import com.coworking.reservas.dto.ReservaListadoResponse;
+import com.coworking.reservas.dto.ReservaListadoSummaryResponse;
 import com.coworking.reservas.dto.ReservaResponse;
+import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.exception.ResourceNotFoundException;
 import com.coworking.reservas.repository.EspacioRepository;
 import com.coworking.reservas.repository.EstadoReservaRepository;
 import com.coworking.reservas.repository.ReservaRepository;
 import com.coworking.reservas.repository.UsuarioRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,7 @@ public class ReservaService implements IReservaService {
     private static final String ESTADO_CANCELADA = "CANCELADA";
     private static final String ESTADO_FINALIZADA = "FINALIZADA";
     private static final long HORAS_MINIMAS_ANTICIPACION_CANCELACION = 6;
+    private static final int MAX_PAGE_SIZE = 24;
 
     @Value("${app.timezone}")
     private String appTimezone;
@@ -93,11 +99,35 @@ public class ReservaService implements IReservaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservaResponse> consultarReservasDelUsuario(Long usuarioId) {
-        return reservaRepository.findReservasByUsuarioId(usuarioId)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+    public ReservaListadoResponse consultarReservasDelUsuario(Long usuarioId, int page, int size) {
+        validarPaginacion(page, size);
+
+        PageRequest pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Order.desc("fecha"),
+                        Sort.Order.desc("horaInicio")
+                )
+        );
+
+        Page<ReservaResponse> reservas = reservaRepository.findByUsuarioId(usuarioId, pageable)
+                .map(this::mapToResponse);
+
+        LocalDateTime fechaReferenciaCancelacion = LocalDateTime.now(getBusinessZoneId())
+                .plusHours(HORAS_MINIMAS_ANTICIPACION_CANCELACION);
+
+        ReservaListadoSummaryResponse resumen = new ReservaListadoSummaryResponse(
+                reservas.getTotalElements(),
+                reservaRepository.countReservasActivasByUsuarioId(usuarioId),
+                reservaRepository.countReservasCancelablesByUsuarioId(
+                        usuarioId,
+                        fechaReferenciaCancelacion.toLocalDate(),
+                        fechaReferenciaCancelacion.toLocalTime()
+                )
+        );
+
+        return new ReservaListadoResponse(PageResponse.from(reservas), resumen);
     }
 
     @Override
@@ -130,6 +160,16 @@ public class ReservaService implements IReservaService {
     private void validarReserva(ReservaCreateRequest reservaCreateRequest) {
         if (!reservaCreateRequest.getHoraInicio().isBefore(reservaCreateRequest.getHoraFin())) {
             throw new IllegalArgumentException("La hora de inicio debe ser anterior a la hora de fin.");
+        }
+    }
+
+    private void validarPaginacion(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("El numero de pagina no puede ser negativo.");
+        }
+
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("El tamano de pagina debe estar entre 1 y " + MAX_PAGE_SIZE + ".");
         }
     }
 

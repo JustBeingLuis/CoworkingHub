@@ -2,14 +2,13 @@ package com.coworking.reservas.service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 
-import com.coworking.reservas.dto.EspacioDisponibleResponse;
+import com.coworking.reservas.dto.EspacioCatalogoResponse;
 import com.coworking.reservas.dto.EspacioDisponibilidadDetalleResponse;
 
 public interface IEspacioService {
 
-    List<EspacioDisponibleResponse> consultarEspaciosDisponibles();
+    EspacioCatalogoResponse consultarEspaciosDisponibles(int page, int size);
 
     EspacioDisponibilidadDetalleResponse consultarDisponibilidadPorFechaYHorario(Long espacioId, LocalDate fecha,
                                                                                  LocalTime horaInicio,

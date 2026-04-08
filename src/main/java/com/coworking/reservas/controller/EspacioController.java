@@ -2,9 +2,8 @@ package com.coworking.reservas.controller;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 
-import com.coworking.reservas.dto.EspacioDisponibleResponse;
+import com.coworking.reservas.dto.EspacioCatalogoResponse;
 import com.coworking.reservas.dto.EspacioDisponibilidadDetalleResponse;
 import com.coworking.reservas.service.IEspacioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +24,10 @@ public class EspacioController {
     private IEspacioService espacioService;
 
     @GetMapping("/disponibles")
-    public ResponseEntity<List<EspacioDisponibleResponse>> consultarDisponibles() {
-        List<EspacioDisponibleResponse> espacios = espacioService.consultarEspaciosDisponibles();
+    public ResponseEntity<EspacioCatalogoResponse> consultarDisponibles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size) {
+        EspacioCatalogoResponse espacios = espacioService.consultarEspaciosDisponibles(page, size);
         return new ResponseEntity<>(espacios, HttpStatus.OK);
     }
 

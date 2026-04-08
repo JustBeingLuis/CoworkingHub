@@ -3,9 +3,13 @@ const reservasMessage = document.getElementById("reservas-message");
 const sessionSummary = document.getElementById("reservas-session-summary");
 const reservasSummary = document.getElementById("reservas-summary");
 const reservasGrid = document.getElementById("reservas-grid");
+const reservasPagination = document.getElementById("reservas-pagination");
 
 const TOKEN_KEY = "coworking_access_token";
 const LOGIN_URL = "/index.html";
+const RESERVAS_PAGE_SIZE = 6;
+
+let currentReservasPage = 0;
 
 logoutButton.addEventListener("click", () => {
     localStorage.removeItem(TOKEN_KEY);
@@ -28,6 +32,22 @@ reservasGrid.addEventListener("click", async (event) => {
     await cancelarReserva(reservaId, cancelButton);
 });
 
+reservasPagination.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-page-target]");
+
+    if (!button || button.disabled) {
+        return;
+    }
+
+    const targetPage = Number(button.dataset.pageTarget);
+
+    if (!Number.isInteger(targetPage) || targetPage < 0 || targetPage === currentReservasPage) {
+        return;
+    }
+
+    await loadReservas(targetPage, false);
+});
+
 hydrateReservasView();
 
 async function hydrateReservasView() {
@@ -38,7 +58,7 @@ async function hydrateReservasView() {
         return;
     }
 
-    await Promise.all([loadPerfil(), loadReservas(false)]);
+    await Promise.all([loadPerfil(), loadReservas(currentReservasPage, false)]);
 }
 
 async function loadPerfil() {
@@ -75,18 +95,23 @@ async function loadPerfil() {
     }
 }
 
-async function loadReservas(showFeedback = true) {
+async function loadReservas(page = currentReservasPage, showFeedback = true) {
     const token = localStorage.getItem(TOKEN_KEY);
 
     try {
-        const response = await fetch("/api/reservas/mias", {
+        const params = new URLSearchParams({
+            page: String(page),
+            size: String(RESERVAS_PAGE_SIZE)
+        });
+
+        const response = await fetch(`/api/reservas/mias?${params.toString()}`, {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${token}`
             }
         });
 
-        const data = await response.json().catch(() => ([]));
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
@@ -99,12 +124,23 @@ async function loadReservas(showFeedback = true) {
             return;
         }
 
-        renderReservasSummary(data);
-        renderReservasGrid(data);
+        const summary = data.resumen || {};
+        const pageData = data.pagina || buildEmptyPageData(page, RESERVAS_PAGE_SIZE);
+        const reservas = Array.isArray(pageData.content) ? pageData.content : [];
+
+        currentReservasPage = pageData.pageNumber ?? page;
+
+        renderReservasSummary(summary);
+        renderReservasGrid(reservas);
+        renderPagination(reservasPagination, pageData, "reservas");
 
         if (showFeedback) {
-            if (data.length > 0) {
-                showMessage(reservasMessage, `Se cargaron ${data.length} reservas asociadas a tu cuenta.`, "success");
+            if (reservas.length > 0) {
+                showMessage(
+                    reservasMessage,
+                    `Mostrando ${pageData.numberOfElements} reserva(s) de ${summary.totalReservas || pageData.totalElements || 0}.`,
+                    "success"
+                );
             } else {
                 showMessage(reservasMessage, "Todavia no tienes reservas registradas.", "");
             }
@@ -141,7 +177,7 @@ async function cancelarReserva(reservaId, button) {
             return;
         }
 
-        await loadReservas(false);
+        await loadReservas(currentReservasPage, false);
         showMessage(
             reservasMessage,
             `La reserva de ${data.nombreEspacio || "tu espacio"} para el ${formatDate(data.fecha)} fue cancelada correctamente.`,
@@ -155,21 +191,18 @@ async function cancelarReserva(reservaId, button) {
 }
 
 function renderReservasSummary(reservas) {
-    const activas = reservas.filter((reserva) => !["CANCELADA", "FINALIZADA"].includes((reserva.estado || "").toUpperCase()));
-    const cancelables = reservas.filter((reserva) => reserva.puedeCancelarse).length;
-
     reservasSummary.innerHTML = `
         <article class="summary-card">
             <span>Total de reservas</span>
-            <strong>${reservas.length}</strong>
+            <strong>${Number(reservas.totalReservas || 0)}</strong>
         </article>
         <article class="summary-card">
             <span>Reservas activas</span>
-            <strong>${activas.length}</strong>
+            <strong>${Number(reservas.reservasActivas || 0)}</strong>
         </article>
         <article class="summary-card">
             <span>Cancelables hoy</span>
-            <strong>${cancelables}</strong>
+            <strong>${Number(reservas.cancelablesHoy || 0)}</strong>
         </article>
     `;
 }
@@ -234,6 +267,42 @@ function renderReservasGrid(reservas) {
     }).join("");
 }
 
+function renderPagination(target, pageData, itemLabel) {
+    const totalPages = Math.max(Number(pageData.totalPages || 0), 1);
+    const currentPage = Number(pageData.pageNumber || 0) + 1;
+    const hasItems = Number(pageData.totalElements || 0) > 0;
+
+    if (!hasItems) {
+        target.innerHTML = "";
+        return;
+    }
+
+    target.innerHTML = `
+        <div class="pagination-info">
+            <strong>Pagina ${currentPage} de ${totalPages}</strong>
+            <span>${pageData.totalElements} ${itemLabel} en total</span>
+        </div>
+        <div class="pagination-actions">
+            <button
+                type="button"
+                class="secondary-button pagination-button"
+                data-page-target="${Math.max(currentPage - 2, 0)}"
+                ${pageData.first ? "disabled" : ""}
+            >
+                Anterior
+            </button>
+            <button
+                type="button"
+                class="secondary-button pagination-button"
+                data-page-target="${currentPage}"
+                ${pageData.last ? "disabled" : ""}
+            >
+                Siguiente
+            </button>
+        </div>
+    `;
+}
+
 function getReservationBadgeClass(estado) {
     if (estado === "CANCELADA") {
         return "status-badge--cancelled";
@@ -287,6 +356,19 @@ function formatTime(value) {
 function showMessage(target, message, type) {
     target.textContent = message;
     target.className = type ? `form-message ${type}` : "form-message";
+}
+
+function buildEmptyPageData(pageNumber, pageSize) {
+    return {
+        content: [],
+        pageNumber,
+        pageSize,
+        totalElements: 0,
+        totalPages: 0,
+        numberOfElements: 0,
+        first: true,
+        last: true
+    };
 }
 
 function toggleLoading(button, isLoading, loadingText) {

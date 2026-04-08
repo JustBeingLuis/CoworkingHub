@@ -1,9 +1,8 @@
 package com.coworking.reservas.controller;
 
-import java.util.List;
-
 import com.coworking.reservas.config.UsuarioDetails;
 import com.coworking.reservas.dto.ReservaCreateRequest;
+import com.coworking.reservas.dto.ReservaListadoResponse;
 import com.coworking.reservas.dto.ReservaResponse;
 import com.coworking.reservas.service.IReservaService;
 import jakarta.validation.Valid;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,9 +34,15 @@ public class ReservaController {
     }
 
     @GetMapping("/mias")
-    public ResponseEntity<List<ReservaResponse>> consultarMisReservas(
-            @AuthenticationPrincipal UsuarioDetails usuarioDetails) {
-        List<ReservaResponse> reservas = reservaService.consultarReservasDelUsuario(usuarioDetails.getId());
+    public ResponseEntity<ReservaListadoResponse> consultarMisReservas(
+            @AuthenticationPrincipal UsuarioDetails usuarioDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size) {
+        ReservaListadoResponse reservas = reservaService.consultarReservasDelUsuario(
+                usuarioDetails.getId(),
+                page,
+                size
+        );
         return new ResponseEntity<>(reservas, HttpStatus.OK);
     }
 

@@ -3,6 +3,7 @@ const spacesMessage = document.getElementById("spaces-message");
 const sessionSummary = document.getElementById("session-summary");
 const spacesSummary = document.getElementById("spaces-summary");
 const spacesGrid = document.getElementById("spaces-grid");
+const spacesPagination = document.getElementById("spaces-pagination");
 const availabilityModal = document.getElementById("availability-modal");
 const modalCloseButton = document.getElementById("modal-close-button");
 const availabilityForm = document.getElementById("availability-form");
@@ -21,9 +22,11 @@ const modalSpaceMeta = document.getElementById("modal-space-meta");
 
 const TOKEN_KEY = "coworking_access_token";
 const LOGIN_URL = "/index.html";
+const SPACES_PAGE_SIZE = 6;
 const spaceCatalog = new Map();
 
 let currentSpaceId = null;
+let currentSpacesPage = 0;
 
 logoutButton.addEventListener("click", () => {
     clearSession();
@@ -45,6 +48,22 @@ spacesGrid.addEventListener("click", async (event) => {
     }
 
     await openAvailabilityModal(spaceId);
+});
+
+spacesPagination.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-page-target]");
+
+    if (!button || button.disabled) {
+        return;
+    }
+
+    const targetPage = Number(button.dataset.pageTarget);
+
+    if (!Number.isInteger(targetPage) || targetPage < 0 || targetPage === currentSpacesPage) {
+        return;
+    }
+
+    await loadSpaces(targetPage, false);
 });
 
 availabilityForm.addEventListener("submit", async (event) => {
@@ -120,7 +139,7 @@ async function refreshWorkspace() {
         }
 
         renderSessionSummary(data);
-        await loadSpaces(false);
+        await loadSpaces(currentSpacesPage, false);
     } catch (error) {
         sessionSummary.innerHTML = `
             <strong>No fue posible cargar tu sesion</strong>
@@ -129,7 +148,7 @@ async function refreshWorkspace() {
     }
 }
 
-async function loadSpaces(showFeedback = true) {
+async function loadSpaces(page = currentSpacesPage, showFeedback = true) {
     const token = localStorage.getItem(TOKEN_KEY);
 
     if (!token) {
@@ -138,14 +157,19 @@ async function loadSpaces(showFeedback = true) {
     }
 
     try {
-        const response = await fetch("/api/espacios/disponibles", {
+        const params = new URLSearchParams({
+            page: String(page),
+            size: String(SPACES_PAGE_SIZE)
+        });
+
+        const response = await fetch(`/api/espacios/disponibles?${params.toString()}`, {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${token}`
             }
         });
 
-        const data = await response.json().catch(() => ([]));
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
@@ -160,14 +184,21 @@ async function loadSpaces(showFeedback = true) {
             return;
         }
 
-        renderSpacesSummary(data);
-        renderSpacesGrid(data);
+        const summary = data.resumen || {};
+        const pageData = data.pagina || buildEmptyPageData(page, SPACES_PAGE_SIZE);
+        const espacios = Array.isArray(pageData.content) ? pageData.content : [];
+
+        currentSpacesPage = pageData.pageNumber ?? page;
+
+        renderSpacesSummary(summary);
+        renderSpacesGrid(espacios);
+        renderPagination(spacesPagination, pageData, "espacios");
 
         if (showFeedback) {
-            const message = data.length > 0
-                ? `Se cargaron ${data.length} espacios activos del coworking.`
+            const message = espacios.length > 0
+                ? `Mostrando ${pageData.numberOfElements} espacio(s) de ${summary.totalEspacios || pageData.totalElements || 0}.`
                 : "No hay espacios activos registrados en este momento.";
-            showMessage(spacesMessage, message, data.length > 0 ? "success" : "error");
+            showMessage(spacesMessage, message, espacios.length > 0 ? "success" : "error");
         } else {
             showMessage(spacesMessage, "", "");
         }
@@ -292,9 +323,9 @@ function renderSessionSummary(usuario) {
 }
 
 function renderSpacesSummary(espacios) {
-    const totalEspacios = espacios.length;
-    const capacidadAcumulada = espacios.reduce((total, espacio) => total + espacio.capacidad, 0);
-    const tipos = new Set(espacios.map((espacio) => espacio.tipo)).size;
+    const totalEspacios = Number(espacios.totalEspacios || 0);
+    const capacidadAcumulada = Number(espacios.capacidadAcumulada || 0);
+    const tipos = Number(espacios.tiposDisponibles || 0);
 
     spacesSummary.innerHTML = `
         <article class="summary-card">
@@ -357,6 +388,42 @@ function renderSpacesGrid(espacios) {
             </div>
         </article>
     `).join("");
+}
+
+function renderPagination(target, pageData, itemLabel) {
+    const totalPages = Math.max(Number(pageData.totalPages || 0), 1);
+    const currentPage = Number(pageData.pageNumber || 0) + 1;
+    const hasItems = Number(pageData.totalElements || 0) > 0;
+
+    if (!hasItems) {
+        target.innerHTML = "";
+        return;
+    }
+
+    target.innerHTML = `
+        <div class="pagination-info">
+            <strong>Pagina ${currentPage} de ${totalPages}</strong>
+            <span>${pageData.totalElements} ${itemLabel} en total</span>
+        </div>
+        <div class="pagination-actions">
+            <button
+                type="button"
+                class="secondary-button pagination-button"
+                data-page-target="${Math.max(currentPage - 2, 0)}"
+                ${pageData.first ? "disabled" : ""}
+            >
+                Anterior
+            </button>
+            <button
+                type="button"
+                class="secondary-button pagination-button"
+                data-page-target="${currentPage}"
+                ${pageData.last ? "disabled" : ""}
+            >
+                Siguiente
+            </button>
+        </div>
+    `;
 }
 
 function renderModalHeader(espacio) {
@@ -556,6 +623,19 @@ function syncReserveButtonState() {
 
 function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
+}
+
+function buildEmptyPageData(pageNumber, pageSize) {
+    return {
+        content: [],
+        pageNumber,
+        pageSize,
+        totalElements: 0,
+        totalPages: 0,
+        numberOfElements: 0,
+        first: true,
+        last: true
+    };
 }
 
 function formatPrice(value) {

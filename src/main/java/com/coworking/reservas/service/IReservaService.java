@@ -1,15 +1,14 @@
 package com.coworking.reservas.service;
 
-import java.util.List;
-
 import com.coworking.reservas.dto.ReservaCreateRequest;
+import com.coworking.reservas.dto.ReservaListadoResponse;
 import com.coworking.reservas.dto.ReservaResponse;
 
 public interface IReservaService {
 
     ReservaResponse crearReserva(Long usuarioId, ReservaCreateRequest reservaCreateRequest);
 
-    List<ReservaResponse> consultarReservasDelUsuario(Long usuarioId);
+    ReservaListadoResponse consultarReservasDelUsuario(Long usuarioId, int page, int size);
 
     ReservaResponse cancelarReserva(Long usuarioId, Long reservaId);
 }

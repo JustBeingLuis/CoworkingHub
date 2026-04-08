@@ -6,12 +6,18 @@ import java.util.List;
 
 import com.coworking.reservas.domain.Espacio;
 import com.coworking.reservas.domain.Reserva;
+import com.coworking.reservas.dto.EspacioCatalogSummaryResponse;
+import com.coworking.reservas.dto.EspacioCatalogoResponse;
 import com.coworking.reservas.dto.EspacioDisponibleResponse;
 import com.coworking.reservas.dto.EspacioDisponibilidadDetalleResponse;
 import com.coworking.reservas.dto.HorarioOcupadoResponse;
+import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.exception.ResourceNotFoundException;
 import com.coworking.reservas.repository.EspacioRepository;
 import com.coworking.reservas.repository.ReservaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class EspacioService implements IEspacioService {
 
+    private static final int MAX_PAGE_SIZE = 24;
+
     @Autowired
     private EspacioRepository espacioRepository;
 
@@ -27,11 +35,28 @@ public class EspacioService implements IEspacioService {
     private ReservaRepository reservaRepository;
 
     @Override
-    public List<EspacioDisponibleResponse> consultarEspaciosDisponibles() {
-        return espacioRepository.findEspaciosDisponibles()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+    public EspacioCatalogoResponse consultarEspaciosDisponibles(int page, int size) {
+        validarPaginacion(page, size);
+
+        PageRequest pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Order.asc("tipo.nombre"),
+                        Sort.Order.asc("nombre")
+                )
+        );
+
+        Page<EspacioDisponibleResponse> espacios = espacioRepository.findByActivoTrue(pageable)
+                .map(this::mapToResponse);
+
+        EspacioCatalogSummaryResponse resumen = new EspacioCatalogSummaryResponse(
+                espacios.getTotalElements(),
+                espacioRepository.sumCapacidadByActivoTrue(),
+                espacioRepository.countTiposDisponiblesActivos()
+        );
+
+        return new EspacioCatalogoResponse(PageResponse.from(espacios), resumen);
     }
 
     @Override
@@ -114,6 +139,16 @@ public class EspacioService implements IEspacioService {
 
         if (horaInicio != null && !horaInicio.isBefore(horaFin)) {
             throw new IllegalArgumentException("La hora de inicio debe ser anterior a la hora de fin.");
+        }
+    }
+
+    private void validarPaginacion(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("El numero de pagina no puede ser negativo.");
+        }
+
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("El tamano de pagina debe estar entre 1 y " + MAX_PAGE_SIZE + ".");
         }
     }
 
