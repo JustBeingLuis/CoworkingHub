@@ -283,7 +283,7 @@ public class ReservaService implements IReservaService {
                     null,
                     null,
                     reporte.getTotalElements(),
-                    reservaRepository.countDistinctEspacioIdByEstadoNombreIgnoreCaseAndFechaBetween(
+                    reservaRepository.countEspaciosUnicosByEstadoYFecha(
                             estadoValidado,
                             fechaInicio,
                             fechaFin

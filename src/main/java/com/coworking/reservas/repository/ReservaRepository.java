@@ -34,8 +34,16 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     long countByEspacioIdAndEstadoNombreIgnoreCaseAndFechaBetween(Long espacioId, String estado, LocalDate fechaInicio,
                                                                   LocalDate fechaFin);
 
-    long countDistinctEspacioIdByEstadoNombreIgnoreCaseAndFechaBetween(String estado, LocalDate fechaInicio,
-                                                                       LocalDate fechaFin);
+    @Query("""
+            select count(distinct r.espacio.id)
+            from Reserva r
+            join r.estado er
+            where upper(er.nombre) = upper(:estado)
+              and r.fecha between :fechaInicio and :fechaFin
+            """)
+    long countEspaciosUnicosByEstadoYFecha(@Param("estado") String estado,
+                                           @Param("fechaInicio") LocalDate fechaInicio,
+                                           @Param("fechaFin") LocalDate fechaFin);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
