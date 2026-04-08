@@ -563,6 +563,39 @@ body.modal-open {
     flex-wrap: wrap;
 }
 
+.report-filter-form {
+    display: grid;
+    gap: 16px;
+}
+
+.report-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.report-filter-grid .field {
+    margin-bottom: 0;
+}
+
+.report-filter-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.report-filter-actions .primary-button,
+.report-filter-actions .secondary-button {
+    width: auto;
+    margin-top: 0;
+}
+
+.report-summary-note {
+    margin: 0 0 16px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
 .admin-space-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -653,6 +686,11 @@ body.modal-open {
 
 .reservation-note-inline {
     word-break: break-word;
+}
+
+.reservation-note--stacked {
+    display: grid;
+    gap: 4px;
 }
 
 .reservation-actions {
@@ -947,7 +985,8 @@ body.modal-open {
     }
 
     .summary-grid,
-    .spaces-grid {
+    .spaces-grid,
+    .report-filter-grid {
         grid-template-columns: 1fr;
     }
 

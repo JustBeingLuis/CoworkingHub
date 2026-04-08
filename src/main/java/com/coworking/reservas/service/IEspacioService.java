@@ -8,6 +8,7 @@ import com.coworking.reservas.dto.EspacioAdminRequest;
 import com.coworking.reservas.dto.EspacioAdminResponse;
 import com.coworking.reservas.dto.EspacioCatalogoResponse;
 import com.coworking.reservas.dto.EspacioDisponibilidadDetalleResponse;
+import com.coworking.reservas.dto.EspacioReporteOptionResponse;
 import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.dto.TipoEspacioResponse;
 
@@ -26,6 +27,8 @@ public interface IEspacioService {
     EspacioAdminResponse eliminarEspacio(Long espacioId);
 
     List<TipoEspacioResponse> consultarTiposEspacio();
+
+    List<EspacioReporteOptionResponse> consultarEspaciosParaReporte();
 
     EspacioDisponibilidadDetalleResponse consultarDisponibilidadPorFechaYHorario(Long espacioId, LocalDate fecha,
                                                                                  LocalTime horaInicio,

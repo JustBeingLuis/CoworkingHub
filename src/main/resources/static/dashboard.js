@@ -4,6 +4,7 @@ const sessionSummary = document.getElementById("session-summary");
 const myReservationsLink = document.getElementById("my-reservations-link");
 const adminSpacesLink = document.getElementById("admin-spaces-link");
 const adminReservationsLink = document.getElementById("admin-reservations-link");
+const adminReportsLink = document.getElementById("admin-reports-link");
 const spacesSummary = document.getElementById("spaces-summary");
 const spacesGrid = document.getElementById("spaces-grid");
 const spacesPagination = document.getElementById("spaces-pagination");
@@ -322,6 +323,7 @@ function renderSessionSummary(usuario) {
     myReservationsLink.hidden = esAdmin;
     adminSpacesLink.hidden = !esAdmin;
     adminReservationsLink.hidden = !esAdmin;
+    adminReportsLink.hidden = !esAdmin;
 
     sessionSummary.innerHTML = `
         <strong>${escapeHtml(usuario.nombre || "")}</strong>

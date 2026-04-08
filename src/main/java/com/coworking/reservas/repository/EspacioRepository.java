@@ -1,5 +1,6 @@
 package com.coworking.reservas.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.coworking.reservas.domain.Espacio;
@@ -16,6 +17,9 @@ public interface EspacioRepository extends JpaRepository<Espacio, Long> {
 
     @EntityGraph(attributePaths = "tipo")
     Page<Espacio> findByActivoTrue(Pageable pageable);
+
+    @EntityGraph(attributePaths = "tipo")
+    List<Espacio> findAllByOrderByNombreAsc();
 
     @Query("""
             select coalesce(sum(e.capacidad), 0)

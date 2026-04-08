@@ -1,5 +1,7 @@
 package com.coworking.reservas.service;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -8,6 +10,9 @@ import com.coworking.reservas.domain.EstadoReserva;
 import com.coworking.reservas.domain.Reserva;
 import com.coworking.reservas.domain.Usuario;
 import com.coworking.reservas.dto.PageResponse;
+import com.coworking.reservas.dto.ReporteOcupacionItemResponse;
+import com.coworking.reservas.dto.ReporteOcupacionListadoResponse;
+import com.coworking.reservas.dto.ReporteOcupacionSummaryResponse;
 import com.coworking.reservas.dto.ReservaAdminListadoResponse;
 import com.coworking.reservas.dto.ReservaAdminResponse;
 import com.coworking.reservas.dto.ReservaAdminSummaryResponse;
@@ -37,6 +42,9 @@ public class ReservaService implements IReservaService {
     private static final String ESTADO_RESERVA_POR_DEFECTO = "CONFIRMADA";
     private static final String ESTADO_CANCELADA = "CANCELADA";
     private static final String ESTADO_FINALIZADA = "FINALIZADA";
+    private static final String ESTADO_CONFIRMADA = "CONFIRMADA";
+    private static final String MODO_REPORTE_GENERAL = "GENERAL";
+    private static final String MODO_REPORTE_ESPACIO = "ESPACIO";
     private static final long HORAS_MINIMAS_ANTICIPACION_CANCELACION = 6;
     private static final int MAX_PAGE_SIZE = 24;
 
@@ -188,6 +196,83 @@ public class ReservaService implements IReservaService {
     }
 
     @Override
+    public ReporteOcupacionListadoResponse generarReporteOcupacion(LocalDate fechaInicio, LocalDate fechaFin,
+                                                                   String estado, String modo, Long espacioId,
+                                                                   int page, int size) {
+        actualizarReservasFinalizadas();
+        validarPaginacion(page, size);
+
+        String estadoValidado = normalizarEstadoReporte(estado);
+        String modoValidado = normalizarModoReporte(modo);
+        validarRangoFechas(fechaInicio, fechaFin);
+
+        PageRequest pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Order.desc("fecha"),
+                        Sort.Order.desc("horaInicio"),
+                        Sort.Order.desc("fechaCreacion")
+                )
+        );
+
+        Page<ReporteOcupacionItemResponse> reporte;
+        ReporteOcupacionSummaryResponse resumen;
+
+        if (MODO_REPORTE_ESPACIO.equals(modoValidado)) {
+            Espacio espacio = espacioRepository.findById(espacioId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "No se encontro un espacio con el id " + espacioId + " para generar el reporte."
+                    ));
+
+            reporte = reservaRepository.findByEspacioIdAndEstadoNombreIgnoreCaseAndFechaBetween(
+                            espacioId,
+                            estadoValidado,
+                            fechaInicio,
+                            fechaFin,
+                            pageable
+                    )
+                    .map(this::mapToReporteOcupacionItemResponse);
+
+            resumen = new ReporteOcupacionSummaryResponse(
+                    modoValidado,
+                    estadoValidado,
+                    fechaInicio,
+                    fechaFin,
+                    espacio.getId(),
+                    espacio.getNombre(),
+                    reporte.getTotalElements(),
+                    1L
+            );
+        } else {
+            reporte = reservaRepository.findByEstadoNombreIgnoreCaseAndFechaBetween(
+                            estadoValidado,
+                            fechaInicio,
+                            fechaFin,
+                            pageable
+                    )
+                    .map(this::mapToReporteOcupacionItemResponse);
+
+            resumen = new ReporteOcupacionSummaryResponse(
+                    modoValidado,
+                    estadoValidado,
+                    fechaInicio,
+                    fechaFin,
+                    null,
+                    null,
+                    reporte.getTotalElements(),
+                    reservaRepository.countDistinctEspacioIdByEstadoNombreIgnoreCaseAndFechaBetween(
+                            estadoValidado,
+                            fechaInicio,
+                            fechaFin
+                    )
+            );
+        }
+
+        return new ReporteOcupacionListadoResponse(PageResponse.from(reporte), resumen);
+    }
+
+    @Override
     public ReservaResponse cancelarReserva(Long usuarioId, Long reservaId) {
         actualizarReservasFinalizadas();
 
@@ -267,6 +352,24 @@ public class ReservaService implements IReservaService {
         );
     }
 
+    private ReporteOcupacionItemResponse mapToReporteOcupacionItemResponse(Reserva reserva) {
+        return new ReporteOcupacionItemResponse(
+                reserva.getId(),
+                reserva.getEspacio().getId(),
+                reserva.getEspacio().getNombre(),
+                reserva.getEspacio().getTipo().getNombre(),
+                reserva.getUsuario().getId(),
+                reserva.getUsuario().getNombre(),
+                reserva.getUsuario().getCorreo(),
+                reserva.getFecha(),
+                reserva.getHoraInicio(),
+                reserva.getHoraFin(),
+                reserva.getFechaCreacion(),
+                reserva.getEstado().getNombre(),
+                Duration.between(reserva.getHoraInicio(), reserva.getHoraFin()).toMinutes()
+        );
+    }
+
     private ValidacionCancelacion evaluarCancelacion(Reserva reserva) {
         String estadoReserva = reserva.getEstado().getNombre();
 
@@ -295,6 +398,46 @@ public class ReservaService implements IReservaService {
         }
 
         return new ValidacionCancelacion(true, null);
+    }
+
+    private void validarRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
+        if (fechaInicio == null || fechaFin == null) {
+            throw new IllegalArgumentException("Debes indicar la fecha inicial y la fecha final del reporte.");
+        }
+
+        if (fechaInicio.isAfter(fechaFin)) {
+            throw new IllegalArgumentException("La fecha inicial no puede ser posterior a la fecha final.");
+        }
+    }
+
+    private String normalizarEstadoReporte(String estado) {
+        if (estado == null || estado.trim().isEmpty()) {
+            throw new IllegalArgumentException("Debes seleccionar un estado valido para generar el reporte.");
+        }
+
+        String estadoNormalizado = estado.trim().toUpperCase();
+
+        if (!ESTADO_CONFIRMADA.equals(estadoNormalizado)
+                && !ESTADO_CANCELADA.equals(estadoNormalizado)
+                && !ESTADO_FINALIZADA.equals(estadoNormalizado)) {
+            throw new IllegalArgumentException(
+                    "El estado del reporte debe ser CONFIRMADA, CANCELADA o FINALIZADA."
+            );
+        }
+
+        return estadoNormalizado;
+    }
+
+    private String normalizarModoReporte(String modo) {
+        String modoNormalizado = modo == null || modo.trim().isEmpty()
+                ? MODO_REPORTE_GENERAL
+                : modo.trim().toUpperCase();
+
+        if (!MODO_REPORTE_GENERAL.equals(modoNormalizado) && !MODO_REPORTE_ESPACIO.equals(modoNormalizado)) {
+            throw new IllegalArgumentException("El modo del reporte debe ser GENERAL o ESPACIO.");
+        }
+
+        return modoNormalizado;
     }
 
     private ZoneId getBusinessZoneId() {

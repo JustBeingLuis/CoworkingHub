@@ -14,6 +14,7 @@ import com.coworking.reservas.dto.EspacioCatalogSummaryResponse;
 import com.coworking.reservas.dto.EspacioCatalogoResponse;
 import com.coworking.reservas.dto.EspacioDisponibleResponse;
 import com.coworking.reservas.dto.EspacioDisponibilidadDetalleResponse;
+import com.coworking.reservas.dto.EspacioReporteOptionResponse;
 import com.coworking.reservas.dto.HorarioOcupadoResponse;
 import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.dto.TipoEspacioResponse;
@@ -152,6 +153,14 @@ public class EspacioService implements IEspacioService {
     }
 
     @Override
+    public List<EspacioReporteOptionResponse> consultarEspaciosParaReporte() {
+        return espacioRepository.findAllByOrderByNombreAsc()
+                .stream()
+                .map(this::mapToReporteOptionResponse)
+                .toList();
+    }
+
+    @Override
     public EspacioDisponibilidadDetalleResponse consultarDisponibilidadPorFechaYHorario(Long espacioId, LocalDate fecha,
                                                                                         LocalTime horaInicio,
                                                                                         LocalTime horaFin) {
@@ -231,6 +240,15 @@ public class EspacioService implements IEspacioService {
                 tipoEspacio.getId(),
                 tipoEspacio.getNombre(),
                 tipoEspacio.getDescripcion()
+        );
+    }
+
+    private EspacioReporteOptionResponse mapToReporteOptionResponse(Espacio espacio) {
+        return new EspacioReporteOptionResponse(
+                espacio.getId(),
+                espacio.getNombre(),
+                espacio.getTipo().getNombre(),
+                espacio.getActivo()
         );
     }
 

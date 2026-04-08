@@ -20,6 +20,23 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     @EntityGraph(attributePaths = {"usuario", "espacio", "espacio.tipo", "estado"})
     Page<Reserva> findAllBy(Pageable pageable);
 
+    @EntityGraph(attributePaths = {"usuario", "espacio", "espacio.tipo", "estado"})
+    Page<Reserva> findByEstadoNombreIgnoreCaseAndFechaBetween(String estado, LocalDate fechaInicio,
+                                                              LocalDate fechaFin, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"usuario", "espacio", "espacio.tipo", "estado"})
+    Page<Reserva> findByEspacioIdAndEstadoNombreIgnoreCaseAndFechaBetween(Long espacioId, String estado,
+                                                                          LocalDate fechaInicio, LocalDate fechaFin,
+                                                                          Pageable pageable);
+
+    long countByEstadoNombreIgnoreCaseAndFechaBetween(String estado, LocalDate fechaInicio, LocalDate fechaFin);
+
+    long countByEspacioIdAndEstadoNombreIgnoreCaseAndFechaBetween(Long espacioId, String estado, LocalDate fechaInicio,
+                                                                  LocalDate fechaFin);
+
+    long countDistinctEspacioIdByEstadoNombreIgnoreCaseAndFechaBetween(String estado, LocalDate fechaInicio,
+                                                                       LocalDate fechaFin);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update Reserva r
