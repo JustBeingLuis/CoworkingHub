@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Usuarios | Coworking</title>
+    <link rel="stylesheet" href="/styles.css?v=20260408i">
+</head>
+<body>
+<section class="workspace workspace--full">
+    <div class="workspace-shell">
+        <header class="dashboard-topbar">
+            <div>
+                <p class="section-kicker">Sistema de Gestion de Reservas para Coworking</p>
+                <h1 class="dashboard-title">Gestion de usuarios</h1>
+                <p class="workspace-copy">
+                    Administra las cuentas registradas en la plataforma, ajusta sus datos,
+                    cambia roles y controla si tienen acceso activo al sistema.
+                </p>
+            </div>
+        </header>
+
+        <section class="dashboard-grid dashboard-grid--admin">
+            <div class="admin-sidebar">
+                <article class="form-card session-card session-card--compact">
+                    <div class="form-header">
+                        <span class="badge">Administrador</span>
+                        <h2>Sesion activa</h2>
+                        <p>Acceso restringido a la administracion de cuentas de usuario.</p>
+                    </div>
+
+                    <div id="admin-users-session-summary" class="session-summary">
+                        Cargando informacion de la cuenta...
+                    </div>
+                    <a href="/admin-espacios.html" class="secondary-button secondary-link-button">Gestionar espacios</a>
+                    <a href="/admin-reservas.html" class="secondary-button secondary-link-button">Ver reservas</a>
+                    <a href="/admin-reportes.html" class="secondary-button secondary-link-button">Ver reportes</a>
+                    <a href="/dashboard.html" class="secondary-button secondary-link-button">Volver al panel</a>
+                    <button id="admin-users-logout-button" type="button" class="secondary-button secondary-button--ghost">
+                        Cerrar sesion
+                    </button>
+                </article>
+
+                <article class="form-card">
+                    <div class="form-header">
+                        <h2 id="admin-user-form-title">Editar usuario</h2>
+                        <p>Selecciona un usuario del listado para actualizar sus datos, su rol o su estado de acceso.</p>
+                    </div>
+
+                    <form id="admin-user-form">
+                        <label class="field">
+                            <span>Nombre</span>
+                            <input id="admin-user-name" type="text" maxlength="100" required>
+                        </label>
+
+                        <label class="field">
+                            <span>Correo</span>
+                            <input id="admin-user-email" type="email" maxlength="150" required>
+                        </label>
+
+                        <label class="field">
+                            <span>Rol</span>
+                            <select id="admin-user-role" class="field-select" required>
+                                <option value="">Selecciona un rol</option>
+                            </select>
+                        </label>
+
+                        <label class="checkbox-field">
+                            <input id="admin-user-active" type="checkbox" checked>
+                            <span>Usuario activo en la plataforma</span>
+                        </label>
+
+                        <div class="admin-form-actions">
+                            <button id="admin-user-submit" type="submit" class="primary-button">Guardar cambios</button>
+                            <button id="admin-user-reset" type="button" class="secondary-button">Limpiar seleccion</button>
+                        </div>
+                    </form>
+
+                    <p id="admin-user-form-message" class="form-message" role="status" aria-live="polite"></p>
+                </article>
+            </div>
+
+            <div class="dashboard-content">
+                <p id="admin-users-message" class="form-message workspace-message" role="status" aria-live="polite"></p>
+
+                <div id="admin-users-summary" class="summary-grid">
+                    <article class="summary-card">
+                        <span>Total de usuarios</span>
+                        <strong>0</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span>Usuarios activos</span>
+                        <strong>0</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span>Administradores</span>
+                        <strong>0</strong>
+                    </article>
+                </div>
+
+                <div id="admin-users-grid" class="spaces-grid">
+                    <article class="empty-state">
+                        <h3>Cargando usuarios del sistema</h3>
+                        <p>Espera un momento mientras consultamos las cuentas registradas.</p>
+                    </article>
+                </div>
+
+                <div id="admin-users-pagination" class="pagination-bar" aria-live="polite"></div>
+            </div>
+        </section>
+    </div>
+</section>
+
+<script src="/admin-usuarios.js?v=20260408i"></script>
+</body>
+</html>

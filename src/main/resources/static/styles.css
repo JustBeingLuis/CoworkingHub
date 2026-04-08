@@ -559,6 +559,12 @@ body.modal-open {
     min-height: 100%;
 }
 
+.admin-user-card {
+    gap: 16px;
+    grid-template-rows: auto auto auto 1fr auto;
+    min-height: 100%;
+}
+
 .admin-space-badges {
     display: grid;
     gap: 8px;
