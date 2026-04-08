@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Reservas | Coworking</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<section class="workspace workspace--full">
+    <div class="workspace-shell">
+        <header class="dashboard-topbar">
+            <div>
+                <p class="section-kicker">Sistema de Gestion de Reservas para Coworking</p>
+                <h1 class="dashboard-title">Mis reservas</h1>
+                <p class="workspace-copy">
+                    Consulta todas tus reservas registradas y cancela solo las que aun cumplen
+                    la politica minima de 6 horas de anticipacion.
+                </p>
+            </div>
+        </header>
+
+        <section class="dashboard-grid">
+            <article class="form-card session-card session-card--compact">
+                <div class="form-header">
+                    <span class="badge">Mi cuenta</span>
+                    <h2>Sesion activa</h2>
+                    <p>Resumen del usuario autenticado dentro del sistema.</p>
+                </div>
+
+                <div id="reservas-session-summary" class="session-summary">
+                    Cargando informacion de la cuenta...
+                </div>
+                <a href="/dashboard.html" class="secondary-button secondary-link-button">Volver al panel</a>
+                <button id="reservas-logout-button" type="button" class="secondary-button secondary-button--ghost">
+                    Cerrar sesion
+                </button>
+            </article>
+
+            <div class="dashboard-content">
+                <p id="reservas-message" class="form-message workspace-message" role="status" aria-live="polite"></p>
+
+                <div id="reservas-summary" class="summary-grid">
+                    <article class="summary-card">
+                        <span>Total de reservas</span>
+                        <strong>0</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span>Reservas activas</span>
+                        <strong>0</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span>Cancelables hoy</span>
+                        <strong>0</strong>
+                    </article>
+                </div>
+
+                <div id="reservas-grid" class="reservations-grid">
+                    <article class="empty-state">
+                        <h3>Cargando reservas</h3>
+                        <p>Espera un momento mientras consultamos tus reservas registradas.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </div>
+</section>
+
+<script src="/reservas.js"></script>
+</body>
+</html>

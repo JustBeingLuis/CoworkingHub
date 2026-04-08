@@ -1,5 +1,7 @@
 package com.coworking.reservas.controller;
 
+import java.util.List;
+
 import com.coworking.reservas.config.UsuarioDetails;
 import com.coworking.reservas.dto.ReservaCreateRequest;
 import com.coworking.reservas.dto.ReservaResponse;
@@ -9,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,5 +31,19 @@ public class ReservaController {
                                                         @Valid @RequestBody ReservaCreateRequest request) {
         ReservaResponse reservaResponse = reservaService.crearReserva(usuarioDetails.getId(), request);
         return new ResponseEntity<>(reservaResponse, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/mias")
+    public ResponseEntity<List<ReservaResponse>> consultarMisReservas(
+            @AuthenticationPrincipal UsuarioDetails usuarioDetails) {
+        List<ReservaResponse> reservas = reservaService.consultarReservasDelUsuario(usuarioDetails.getId());
+        return new ResponseEntity<>(reservas, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{reservaId}/cancelar")
+    public ResponseEntity<ReservaResponse> cancelarReserva(@AuthenticationPrincipal UsuarioDetails usuarioDetails,
+                                                           @PathVariable Long reservaId) {
+        ReservaResponse reservaResponse = reservaService.cancelarReserva(usuarioDetails.getId(), reservaId);
+        return new ResponseEntity<>(reservaResponse, HttpStatus.OK);
     }
 }

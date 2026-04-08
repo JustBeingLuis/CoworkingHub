@@ -221,6 +221,13 @@ body.modal-open {
     box-shadow: 0 16px 28px rgba(19, 34, 56, 0.1);
 }
 
+.secondary-link-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
 .secondary-button--ghost {
     margin-top: 12px;
     background: transparent;
@@ -495,6 +502,77 @@ body.modal-open {
     font-size: 0.92rem;
 }
 
+.reservations-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.reservation-card {
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+    background: var(--paper);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+}
+
+.reservation-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: start;
+}
+
+.reservation-card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.reservation-subtitle {
+    margin: 6px 0 0;
+    color: var(--ink-soft);
+}
+
+.reservation-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.reservation-note {
+    margin: 0;
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
+.reservation-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.reservation-cancel-button {
+    width: auto;
+    margin-top: 0;
+}
+
+.status-badge--confirmed {
+    background: rgba(31, 122, 82, 0.14);
+    color: var(--success);
+}
+
+.status-badge--cancelled,
+.status-badge--finished {
+    background: rgba(156, 47, 47, 0.14);
+    color: var(--danger);
+}
+
+.status-badge--pending {
+    background: rgba(212, 106, 58, 0.14);
+    color: var(--accent-dark);
+}
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -718,14 +796,17 @@ body.modal-open {
     }
 
     .availability-form-grid,
-    .availability-summary-grid {
+    .availability-summary-grid,
+    .reservation-meta {
         grid-template-columns: 1fr;
     }
 
     .space-card-actions,
     .modal-header-top,
     .slot-card,
-    .availability-actions {
+    .availability-actions,
+    .reservation-card-header,
+    .reservation-actions {
         flex-direction: column;
         align-items: stretch;
     }
