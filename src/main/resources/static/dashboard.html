@@ -78,7 +78,7 @@
             <span id="modal-space-badge" class="space-badge modal-space-badge">Espacio</span>
 
             <p id="modal-space-copy" class="workspace-copy">
-                Consulta los horarios ocupados del espacio y valida un rango horario para la fecha seleccionada.
+                Consulta los horarios ocupados del espacio y crea la reserva para la fecha y horario seleccionados.
             </p>
             <p id="modal-space-meta" class="modal-space-meta"></p>
         </div>
@@ -101,9 +101,14 @@
                 </label>
             </div>
 
-            <button id="availability-submit-button" type="submit" class="primary-button">
-                Consultar disponibilidad
-            </button>
+            <div class="availability-actions">
+                <button id="availability-submit-button" type="submit" class="secondary-button">
+                    Consultar disponibilidad
+                </button>
+                <button id="reserve-submit-button" type="button" class="primary-button" disabled>
+                    Reservar este espacio
+                </button>
+            </div>
         </form>
 
         <p id="availability-message" class="form-message" role="status" aria-live="polite"></p>

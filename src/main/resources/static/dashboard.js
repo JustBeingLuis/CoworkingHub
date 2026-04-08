@@ -10,6 +10,7 @@ const availabilityDateInput = document.getElementById("availability-date");
 const availabilityStartInput = document.getElementById("availability-start-time");
 const availabilityEndInput = document.getElementById("availability-end-time");
 const availabilitySubmitButton = document.getElementById("availability-submit-button");
+const reserveSubmitButton = document.getElementById("reserve-submit-button");
 const availabilityMessage = document.getElementById("availability-message");
 const availabilitySummary = document.getElementById("availability-summary");
 const occupiedSlots = document.getElementById("occupied-slots");
@@ -51,6 +52,10 @@ availabilityForm.addEventListener("submit", async (event) => {
     await loadAvailabilityDetails(true);
 });
 
+reserveSubmitButton.addEventListener("click", async () => {
+    await createReservation();
+});
+
 modalCloseButton.addEventListener("click", () => {
     closeAvailabilityModal();
 });
@@ -65,6 +70,14 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !availabilityModal.hidden) {
         closeAvailabilityModal();
     }
+});
+
+[availabilityDateInput, availabilityStartInput, availabilityEndInput].forEach((input) => {
+    ["input", "change"].forEach((eventName) => {
+        input.addEventListener(eventName, () => {
+            syncReserveButtonState();
+        });
+    });
 });
 
 hydrateSessionState();
@@ -177,6 +190,7 @@ async function openAvailabilityModal(spaceId) {
     availabilityDateInput.value = getTodayDateValue();
     renderModalHeader(espacio);
     renderAvailabilityPlaceholder();
+    syncReserveButtonState();
     showMessage(availabilityMessage, "", "");
     availabilityModal.hidden = false;
     document.body.classList.add("modal-open");
@@ -189,6 +203,7 @@ function closeAvailabilityModal() {
     document.body.classList.remove("modal-open");
     currentSpaceId = null;
     availabilityForm.reset();
+    syncReserveButtonState();
     showMessage(availabilityMessage, "", "");
 }
 
@@ -348,7 +363,7 @@ function renderModalHeader(espacio) {
     modalTitle.textContent = espacio.nombre || "Espacio";
     modalSpaceBadge.textContent = espacio.tipo || "Espacio";
     modalSpaceCopy.textContent = espacio.descripcionTipo
-        || "Consulta los horarios ocupados del espacio y valida un rango horario para la fecha seleccionada.";
+        || "Consulta los horarios ocupados del espacio y crea la reserva para la fecha y horario seleccionados.";
     modalSpaceMeta.textContent = `Capacidad: ${espacio.capacidad} persona${espacio.capacidad === 1 ? "" : "s"} | Precio por hora: ${formatPrice(espacio.precioPorHora)}`;
 }
 
@@ -452,6 +467,91 @@ function buildAvailabilityStatus(disponibilidad) {
         label: "Dia sin ocupacion",
         className: "availability-chip--available"
     };
+}
+
+async function createReservation() {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (!token) {
+        window.location.replace(LOGIN_URL);
+        return;
+    }
+
+    if (!currentSpaceId) {
+        return;
+    }
+
+    const fecha = availabilityDateInput.value;
+    const horaInicio = availabilityStartInput.value;
+    const horaFin = availabilityEndInput.value;
+
+    if (!fecha || !horaInicio || !horaFin) {
+        showMessage(availabilityMessage, "Debes indicar fecha, hora de inicio y hora de fin para crear la reserva.", "error");
+        return;
+    }
+
+    if (horaInicio >= horaFin) {
+        showMessage(availabilityMessage, "La hora de inicio debe ser anterior a la hora de fin.", "error");
+        return;
+    }
+
+    toggleLoading(reserveSubmitButton, true, "Reservando...");
+
+    try {
+        const response = await fetch("/api/reservas", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                espacioId: currentSpaceId,
+                fecha,
+                horaInicio,
+                horaFin
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                clearSession();
+                window.location.replace(LOGIN_URL);
+                return;
+            }
+
+            showMessage(availabilityMessage, data.message || "No fue posible crear la reserva.", "error");
+            return;
+        }
+
+        availabilityStartInput.value = "";
+        availabilityEndInput.value = "";
+        syncReserveButtonState();
+        await loadAvailabilityDetails(false);
+
+        showMessage(
+            availabilityMessage,
+            `Reserva creada correctamente para ${data.nombreEspacio || "el espacio"} el ${formatDate(data.fecha)} de ${formatTime(data.horaInicio)} a ${formatTime(data.horaFin)}.`,
+            "success"
+        );
+    } catch (error) {
+        showMessage(availabilityMessage, "No fue posible conectar con el backend.", "error");
+    } finally {
+        toggleLoading(reserveSubmitButton, false);
+        syncReserveButtonState();
+    }
+}
+
+function syncReserveButtonState() {
+    const canReserve = Boolean(
+        currentSpaceId
+        && availabilityDateInput.value
+        && availabilityStartInput.value
+        && availabilityEndInput.value
+    );
+
+    reserveSubmitButton.disabled = !canReserve;
 }
 
 function clearSession() {
