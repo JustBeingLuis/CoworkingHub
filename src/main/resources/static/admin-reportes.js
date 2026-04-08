@@ -325,7 +325,11 @@ function renderReportGrid(registros) {
                     <span class="reservation-note-inline">${escapeHtml(registro.usuarioCorreo || "")}</span>
                 </p>
 
-                <div class="reservation-meta reservation-meta--admin">
+                <div class="reservation-meta reservation-meta--report">
+                    <div class="space-meta-item">
+                        <span>Creada</span>
+                        <strong>${formatDateTime(registro.fechaCreacion)}</strong>
+                    </div>
                     <div class="space-meta-item">
                         <span>Fecha</span>
                         <strong>${formatDate(registro.fecha)}</strong>
@@ -497,6 +501,22 @@ function formatDate(value) {
 
 function formatTime(value) {
     return String(value || "").slice(0, 5);
+}
+
+function formatDateTime(value) {
+    if (!value) {
+        return "Sin fecha";
+    }
+
+    const date = new Date(value);
+
+    return new Intl.DateTimeFormat("es-CO", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    }).format(date);
 }
 
 function showMessage(target, message, type) {

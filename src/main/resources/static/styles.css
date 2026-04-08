@@ -684,6 +684,10 @@ body.modal-open {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.reservation-meta--report {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .reservation-note {
     margin: 0;
     color: var(--ink-soft);
