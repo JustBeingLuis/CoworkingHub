@@ -4,8 +4,9 @@
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](#)
 [![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](#)
-[![MySQL](https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white)](#)
-[![Spring Security](https://img.shields.io/badge/Spring%20Security-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](#)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#)
+[![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)](#)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)](#)
 
 ---
 
@@ -137,14 +138,43 @@ Funcionalidades_Core:
 
 ### Arquitectura del Sistema
 
+El proyecto posee una arquitectura desacoplada impulsada por **Docker** para lograr escalabilidad e independencia entre la interfaz del usuario web y los servicios pesados en Java.
+
 ```mermaid
-graph TB
-    A[Frontend] --> B[API REST - Spring Boot]
-    B --> C[Service Layer]
-    C --> D[Repository Layer]
-    D --> E[Base de Datos]
-    B --> F[Spring Security]
-    F --> G[JWT Authentication]
+graph TD
+    Client((Navegador))
+    
+    subgraph Red Docker Compose
+        A[Nginx Servidor Web\nPuerto 80]
+        B[Spring Boot API\nPuerto 8080]
+        
+        subgraph Capas Java
+            B --> C[Service Layer]
+            C --> D[Repository Layer]
+        end
+    end
+    
+    E[(PostgreSQL Cloud)]
+    
+    Client -->|Petición de Interfaz| A
+    Client -.->|Petición REST/JWT| B
+    D -->|Persistencia| E
+```
+
+### 📁 Estructura del Proyecto
+
+```text
+📦 coworking-management
+ ┣ 📂 backend           # ☕ API REST (Java 17, Spring Boot)
+ ┃ ┣ 📂 src           # Lógica y Controladores 
+ ┃ ┣ 📜 Dockerfile    # Imagen de compilación y ejecución Java
+ ┃ ┗ 📜 .env          # Variables secretas y conexión BD
+ ┣ 📂 frontend          # 🌐 Archivos web estáticos
+ ┃ ┣ 📜 index.html    # Punto de entrada
+ ┃ ┣ 📜 *.css & *.js  # Interfaz gráfica pura nativa
+ ┃ ┗ 📜 Dockerfile    # Imagen ultra-ligera (nginx:alpine)
+ ┣ 📜 docker-compose.yml  # 🐳 Orquestador de contenedores
+ ┗ 📜 README.md
 ```
 
 ---
@@ -319,40 +349,36 @@ _Diagrama completo de la arquitectura del sistema y diseño de la base de datos,
 
 ## 🚀 Instalación y Configuración
 
+El entorno emplea **Docker Compose** para asegurar que el Frontend web y el Backend se levanten coordinados sin necesidad de preparativos especiales o herramientas pesadas instaladas localmente en cada ordenador.
+
 ### Prerrequisitos
 
-```bash
-Java 17+
-Maven 3.6+
-MySQL 8.0+ / PostgreSQL 12+
-Git
-```
+- [Docker Desktop](https://www.docker.com/) o Engine con plugin `compose`.
+- Git
 
 ### Configuración del Entorno
 
 ```bash
-# Clonar repositorio
-git clone https://github.com/tu-usuario/coworking-management.git
+# 1. Clonar el repositorio
+git clone https://github.com/JustBeingLuis/Sistema-de-Gesti-n-de-Reservas-para-Coworking.git
 
-# Navegar al directorio
-cd coworking-management
+# 2. Navegar al directorio principal
+cd Sistema-de-Gesti-n-de-Reservas-para-Coworking
 
-# Configurar base de datos en application.properties
-
-# Ejecutar aplicación
-mvn spring-boot:run
+# 3. Construir y ejecutar toda la solución
+docker compose up --build
 ```
+
+> [!TIP]
+> **Accesos Directos Activos:**
+> 🌐 **Interfaz de Usuario (Nginx):** `http://localhost`
+> ⚙️ **API REST (Java):** `http://localhost:8080`
 
 ### Variables de Entorno
 
-```properties
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=coworking_db
-DB_USER=tu_usuario
-DB_PASSWORD=tu_password
-JWT_SECRET=tu_jwt_secret
-```
+> [!NOTE]
+> El proyecto lee de forma segregada sus variables de entorno para el backend. 
+> La conexión a base de datos y llaves de seguridad reposan de forma privada en el archivo `.env` que se inyecta por el Docker Compose.
 
 ---
 
