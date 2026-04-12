@@ -8,6 +8,7 @@ const adminUserForm = document.getElementById("admin-user-form");
 const adminUserFormTitle = document.getElementById("admin-user-form-title");
 const adminUserName = document.getElementById("admin-user-name");
 const adminUserEmail = document.getElementById("admin-user-email");
+const adminUserPassword = document.getElementById("admin-user-password");
 const adminUserRole = document.getElementById("admin-user-role");
 const adminUserActive = document.getElementById("admin-user-active");
 const adminUserSubmit = document.getElementById("admin-user-submit");
@@ -254,8 +255,12 @@ async function loadUserIntoForm(userId) {
         adminUserFormTitle.textContent = `Editar usuario #${data.id}`;
         adminUserName.value = data.nombre || "";
         adminUserEmail.value = data.correo || "";
+        adminUserPassword.value = "";
+        adminUserPassword.placeholder = "Dejar en blanco para conservar la actual";
         adminUserRole.value = data.rolId || "";
         adminUserActive.checked = Boolean(data.activo);
+        adminUserSubmit.textContent = "Guardar cambios";
+        adminUserSubmit.dataset.defaultText = "Guardar cambios";
 
         showMessage(adminUserFormMessage, `Editando el usuario ${data.nombre}.`, "success");
         adminUserName.focus();
@@ -267,23 +272,22 @@ async function loadUserIntoForm(userId) {
 }
 
 async function saveUser() {
-    if (!Number.isInteger(currentEditingUserId)) {
-        showMessage(adminUserFormMessage, "Selecciona un usuario del listado antes de guardar cambios.", "error");
-        return;
-    }
-
     const token = localStorage.getItem(TOKEN_KEY);
+    const isEditing = Number.isInteger(currentEditingUserId);
     const payload = buildUserPayload();
 
     if (!payload) {
         return;
     }
 
-    toggleLoading(adminUserSubmit, true, "Guardando...");
+    const url = isEditing ? `/api/admin/usuarios/${currentEditingUserId}` : "/api/admin/usuarios";
+    const method = isEditing ? "PUT" : "POST";
+
+    toggleLoading(adminUserSubmit, true, isEditing ? "Guardando..." : "Creando...");
 
     try {
-        const response = await fetch(`/api/admin/usuarios/${currentEditingUserId}`, {
-            method: "PUT",
+        const response = await fetch(url, {
+            method,
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`
@@ -305,8 +309,19 @@ async function saveUser() {
         }
 
         await loadAdminUsers(currentAdminUsersPage, false);
-        await loadUserIntoForm(data.id);
-        showMessage(adminUsersMessage, `El usuario ${data.nombre || ""} fue actualizado correctamente.`, "success");
+        if (isEditing) {
+            await loadUserIntoForm(data.id);
+        } else {
+            resetAdminUserForm(false);
+        }
+
+        showMessage(
+            adminUsersMessage,
+            isEditing
+                ? `El usuario ${data.nombre || ""} fue actualizado correctamente.`
+                : `El usuario ${data.nombre || ""} fue creado correctamente.`,
+            "success"
+        );
     } catch (error) {
         showMessage(adminUserFormMessage, "No fue posible conectar con el backend.", "error");
     } finally {
@@ -366,8 +381,10 @@ async function toggleUserStatus(userId, active, button) {
 function buildUserPayload() {
     const nombre = adminUserName.value.trim();
     const correo = adminUserEmail.value.trim();
+    const password = adminUserPassword.value;
     const rolId = Number(adminUserRole.value);
     const activo = adminUserActive.checked;
+    const isEditing = Number.isInteger(currentEditingUserId);
 
     if (!nombre) {
         showMessage(adminUserFormMessage, "El nombre del usuario es obligatorio.", "error");
@@ -384,12 +401,28 @@ function buildUserPayload() {
         return null;
     }
 
-    return {
+    if (!isEditing && (!password || password.length < 8)) {
+        showMessage(adminUserFormMessage, "La contrasena debe tener minimo 8 caracteres para crear el usuario.", "error");
+        return null;
+    }
+
+    if (isEditing && password && password.length < 8) {
+        showMessage(adminUserFormMessage, "La nueva contrasena debe tener minimo 8 caracteres.", "error");
+        return null;
+    }
+
+    const payload = {
         nombre,
         correo,
         rolId,
         activo
     };
+
+    if (password) {
+        payload.password = password;
+    }
+
+    return payload;
 }
 
 function renderUsersSummary(resumen) {
@@ -498,12 +531,18 @@ function renderPagination(target, pageData, itemLabel) {
     `;
 }
 
-function resetAdminUserForm() {
+function resetAdminUserForm(clearMessage = true) {
     currentEditingUserId = null;
-    adminUserFormTitle.textContent = "Editar usuario";
+    adminUserFormTitle.textContent = "Nuevo usuario";
     adminUserForm.reset();
     adminUserActive.checked = true;
-    showMessage(adminUserFormMessage, "", "");
+    adminUserPassword.placeholder = "";
+    adminUserSubmit.textContent = "Crear usuario";
+    adminUserSubmit.dataset.defaultText = "Crear usuario";
+
+    if (clearMessage) {
+        showMessage(adminUserFormMessage, "", "");
+    }
 }
 
 function buildEmptyPageData(pageNumber, pageSize) {

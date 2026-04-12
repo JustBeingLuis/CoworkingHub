@@ -1,5 +1,6 @@
 package com.coworking.reservas.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.coworking.reservas.domain.Usuario;
@@ -19,6 +20,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @EntityGraph(attributePaths = "rol")
     Optional<Usuario> findDetalleById(Long id);
+
+    @EntityGraph(attributePaths = "rol")
+    List<Usuario> findAllByOrderByActivoDescNombreAsc();
 
     long countByActivoTrue();
 

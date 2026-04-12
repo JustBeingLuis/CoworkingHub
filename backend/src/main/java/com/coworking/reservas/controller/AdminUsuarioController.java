@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.coworking.reservas.config.UsuarioDetails;
 import com.coworking.reservas.dto.RolOptionResponse;
+import com.coworking.reservas.dto.UsuarioAdminCreateRequest;
 import com.coworking.reservas.dto.UsuarioAdminListadoResponse;
 import com.coworking.reservas.dto.UsuarioAdminRequest;
 import com.coworking.reservas.dto.UsuarioAdminResponse;
@@ -16,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,6 +49,12 @@ public class AdminUsuarioController {
     public ResponseEntity<UsuarioAdminResponse> consultarUsuario(@PathVariable Long usuarioId) {
         UsuarioAdminResponse usuario = usuarioService.buscarUsuarioParaAdministracion(usuarioId);
         return new ResponseEntity<>(usuario, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public ResponseEntity<UsuarioAdminResponse> crearUsuario(@Valid @RequestBody UsuarioAdminCreateRequest request) {
+        UsuarioAdminResponse usuario = usuarioService.crearUsuarioComoAdministrador(request);
+        return new ResponseEntity<>(usuario, HttpStatus.CREATED);
     }
 
     @PutMapping("/{usuarioId}")

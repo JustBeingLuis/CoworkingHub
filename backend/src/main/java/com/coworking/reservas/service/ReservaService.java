@@ -4,22 +4,27 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 import com.coworking.reservas.domain.Espacio;
 import com.coworking.reservas.domain.EstadoReserva;
 import com.coworking.reservas.domain.Reserva;
 import com.coworking.reservas.domain.Usuario;
+import com.coworking.reservas.dto.EspacioReporteOptionResponse;
+import com.coworking.reservas.dto.EstadoReservaOptionResponse;
 import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.dto.ReporteOcupacionItemResponse;
 import com.coworking.reservas.dto.ReporteOcupacionListadoResponse;
 import com.coworking.reservas.dto.ReporteOcupacionSummaryResponse;
 import com.coworking.reservas.dto.ReservaAdminListadoResponse;
+import com.coworking.reservas.dto.ReservaAdminRequest;
 import com.coworking.reservas.dto.ReservaAdminResponse;
 import com.coworking.reservas.dto.ReservaAdminSummaryResponse;
 import com.coworking.reservas.dto.ReservaCreateRequest;
 import com.coworking.reservas.dto.ReservaListadoResponse;
 import com.coworking.reservas.dto.ReservaListadoSummaryResponse;
 import com.coworking.reservas.dto.ReservaResponse;
+import com.coworking.reservas.dto.UsuarioReservaOptionResponse;
 import com.coworking.reservas.exception.ResourceNotFoundException;
 import com.coworking.reservas.repository.EspacioRepository;
 import com.coworking.reservas.repository.EstadoReservaRepository;
@@ -196,13 +201,102 @@ public class ReservaService implements IReservaService {
     }
 
     @Override
+    public ReservaAdminResponse buscarReservaParaAdministracion(Long reservaId) {
+        actualizarReservasFinalizadas();
+
+        if (reservaId == null) {
+            throw new IllegalArgumentException("El id de la reserva es obligatorio.");
+        }
+
+        return mapToAdminResponse(buscarReservaDetalle(reservaId));
+    }
+
+    @Override
+    public ReservaAdminResponse crearReservaComoAdministrador(ReservaAdminRequest reservaAdminRequest) {
+        actualizarReservasFinalizadas();
+        validarReservaAdmin(reservaAdminRequest);
+
+        Usuario usuario = usuarioRepository.findDetalleById(reservaAdminRequest.getUsuarioId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un usuario con el id " + reservaAdminRequest.getUsuarioId()
+                ));
+        Espacio espacio = espacioRepository.findById(reservaAdminRequest.getEspacioId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un espacio con el id " + reservaAdminRequest.getEspacioId()
+                ));
+        EstadoReserva estado = estadoReservaRepository.findById(reservaAdminRequest.getEstadoId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un estado de reserva con el id " + reservaAdminRequest.getEstadoId()
+                ));
+
+        validarEstadoReservaAdministrable(estado);
+        validarConflictosReservaAdmin(null, espacio.getId(), reservaAdminRequest, estado);
+
+        Reserva reserva = new Reserva();
+        reserva.setUsuario(usuario);
+        reserva.setEspacio(espacio);
+        reserva.setEstado(estado);
+        reserva.setFecha(reservaAdminRequest.getFecha());
+        reserva.setHoraInicio(reservaAdminRequest.getHoraInicio());
+        reserva.setHoraFin(reservaAdminRequest.getHoraFin());
+        reserva.setFechaCreacion(LocalDateTime.now(getBusinessZoneId()));
+
+        return mapToAdminResponse(reservaRepository.save(reserva));
+    }
+
+    @Override
+    public ReservaAdminResponse actualizarReservaComoAdministrador(Long reservaId,
+                                                                   ReservaAdminRequest reservaAdminRequest) {
+        actualizarReservasFinalizadas();
+
+        if (reservaId == null) {
+            throw new IllegalArgumentException("El id de la reserva es obligatorio.");
+        }
+
+        validarReservaAdmin(reservaAdminRequest);
+
+        Reserva reserva = buscarReservaDetalle(reservaId);
+        Usuario usuario = usuarioRepository.findDetalleById(reservaAdminRequest.getUsuarioId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un usuario con el id " + reservaAdminRequest.getUsuarioId()
+                ));
+        Espacio espacio = espacioRepository.findById(reservaAdminRequest.getEspacioId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un espacio con el id " + reservaAdminRequest.getEspacioId()
+                ));
+        EstadoReserva estado = estadoReservaRepository.findById(reservaAdminRequest.getEstadoId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un estado de reserva con el id " + reservaAdminRequest.getEstadoId()
+                ));
+
+        validarEstadoReservaAdministrable(estado);
+        validarConflictosReservaAdmin(reservaId, espacio.getId(), reservaAdminRequest, estado);
+
+        reserva.setUsuario(usuario);
+        reserva.setEspacio(espacio);
+        reserva.setEstado(estado);
+        reserva.setFecha(reservaAdminRequest.getFecha());
+        reserva.setHoraInicio(reservaAdminRequest.getHoraInicio());
+        reserva.setHoraFin(reservaAdminRequest.getHoraFin());
+
+        return mapToAdminResponse(reservaRepository.save(reserva));
+    }
+
+    @Override
+    public void eliminarReservaComoAdministrador(Long reservaId) {
+        if (reservaId == null) {
+            throw new IllegalArgumentException("El id de la reserva es obligatorio.");
+        }
+
+        Reserva reserva = buscarReservaDetalle(reservaId);
+        reservaRepository.delete(reserva);
+    }
+
+    @Override
     public ReservaAdminResponse cancelarReservaComoAdministrador(Long reservaId) {
         actualizarReservasFinalizadas();
 
-        Reserva reserva = reservaRepository.findDetalleById(reservaId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No se encontro la reserva solicitada."
-                ));
+        Reserva reserva = buscarReservaDetalle(reservaId);
 
         if (!ESTADO_CONFIRMADA.equalsIgnoreCase(reserva.getEstado().getNombre())) {
             throw new IllegalArgumentException("Solo se pueden cancelar reservas en estado CONFIRMADA.");
@@ -215,6 +309,45 @@ public class ReservaService implements IReservaService {
 
         reserva.setEstado(estadoCancelada);
         return mapToAdminResponse(reservaRepository.save(reserva));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UsuarioReservaOptionResponse> consultarUsuariosParaReservasAdministracion() {
+        return usuarioRepository.findAllByOrderByActivoDescNombreAsc()
+                .stream()
+                .map(usuario -> new UsuarioReservaOptionResponse(
+                        usuario.getId(),
+                        usuario.getNombre(),
+                        usuario.getCorreo(),
+                        usuario.getActivo(),
+                        usuario.getRol().getNombre()
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EspacioReporteOptionResponse> consultarEspaciosParaReservasAdministracion() {
+        return espacioRepository.findAllByOrderByNombreAsc()
+                .stream()
+                .map(espacio -> new EspacioReporteOptionResponse(
+                        espacio.getId(),
+                        espacio.getNombre(),
+                        espacio.getTipo().getNombre(),
+                        espacio.getActivo()
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EstadoReservaOptionResponse> consultarEstadosParaReservasAdministracion() {
+        return estadoReservaRepository.findAllByOrderByNombreAsc()
+                .stream()
+                .filter(estado -> !"PENDIENTE".equalsIgnoreCase(estado.getNombre()))
+                .map(estado -> new EstadoReservaOptionResponse(estado.getId(), estado.getNombre()))
+                .toList();
     }
 
     @Override
@@ -329,6 +462,66 @@ public class ReservaService implements IReservaService {
         }
     }
 
+    private void validarReservaAdmin(ReservaAdminRequest reservaAdminRequest) {
+        if (reservaAdminRequest.getUsuarioId() == null) {
+            throw new IllegalArgumentException("Debes seleccionar un usuario.");
+        }
+
+        if (reservaAdminRequest.getEspacioId() == null) {
+            throw new IllegalArgumentException("Debes seleccionar un espacio.");
+        }
+
+        if (reservaAdminRequest.getEstadoId() == null) {
+            throw new IllegalArgumentException("Debes seleccionar un estado.");
+        }
+
+        if (reservaAdminRequest.getFecha() == null) {
+            throw new IllegalArgumentException("Debes indicar la fecha de la reserva.");
+        }
+
+        if (reservaAdminRequest.getHoraInicio() == null || reservaAdminRequest.getHoraFin() == null) {
+            throw new IllegalArgumentException("Debes indicar la hora de inicio y la hora de fin.");
+        }
+
+        if (!reservaAdminRequest.getHoraInicio().isBefore(reservaAdminRequest.getHoraFin())) {
+            throw new IllegalArgumentException("La hora de inicio debe ser anterior a la hora de fin.");
+        }
+    }
+
+    private void validarConflictosReservaAdmin(Long reservaId, Long espacioId, ReservaAdminRequest reservaAdminRequest,
+                                               EstadoReserva estado) {
+        if (ESTADO_CANCELADA.equalsIgnoreCase(estado.getNombre())) {
+            return;
+        }
+
+        List<Reserva> conflictos = reservaId == null
+                ? reservaRepository.findConflictosByEspacioFechaYHorario(
+                        espacioId,
+                        reservaAdminRequest.getFecha(),
+                        reservaAdminRequest.getHoraInicio(),
+                        reservaAdminRequest.getHoraFin()
+                )
+                : reservaRepository.findConflictosByEspacioFechaYHorarioExcluyendoReserva(
+                        reservaId,
+                        espacioId,
+                        reservaAdminRequest.getFecha(),
+                        reservaAdminRequest.getHoraInicio(),
+                        reservaAdminRequest.getHoraFin()
+                );
+
+        if (!conflictos.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "El espacio ya tiene una reserva en conflicto para el rango horario seleccionado."
+            );
+        }
+    }
+
+    private void validarEstadoReservaAdministrable(EstadoReserva estado) {
+        if ("PENDIENTE".equalsIgnoreCase(estado.getNombre())) {
+            throw new IllegalArgumentException("El estado PENDIENTE no se usa en el sistema.");
+        }
+    }
+
     private void validarPaginacion(int page, int size) {
         if (page < 0) {
             throw new IllegalArgumentException("El numero de pagina no puede ser negativo.");
@@ -370,8 +563,16 @@ public class ReservaService implements IReservaService {
                 reserva.getHoraInicio(),
                 reserva.getHoraFin(),
                 reserva.getFechaCreacion(),
+                reserva.getEstado().getId(),
                 reserva.getEstado().getNombre()
         );
+    }
+
+    private Reserva buscarReservaDetalle(Long reservaId) {
+        return reservaRepository.findDetalleById(reservaId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro la reserva solicitada."
+                ));
     }
 
     private ReporteOcupacionItemResponse mapToReporteOcupacionItemResponse(Reserva reserva) {

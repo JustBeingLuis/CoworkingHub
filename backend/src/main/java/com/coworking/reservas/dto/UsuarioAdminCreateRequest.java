@@ -1,21 +1,35 @@
 package com.coworking.reservas.dto;
 
-public class UsuarioAdminRequest {
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
+public class UsuarioAdminCreateRequest {
+
+    @NotBlank(message = "El nombre es obligatorio.")
+    @Size(max = 100, message = "El nombre no puede superar los 100 caracteres.")
     private String nombre;
+
+    @NotBlank(message = "El correo es obligatorio.")
+    @Email(message = "El correo no tiene un formato valido.")
+    @Size(max = 150, message = "El correo no puede superar los 150 caracteres.")
     private String correo;
+
+    @NotBlank(message = "La contrasena es obligatoria.")
+    @Size(min = 8, message = "La contrasena debe tener minimo 8 caracteres.")
     private String password;
+
+    @NotNull(message = "Debes indicar si el usuario esta activo.")
     private Boolean activo;
+
+    @NotNull(message = "Debes seleccionar un rol.")
     private Long rolId;
 
-    public UsuarioAdminRequest() {
+    public UsuarioAdminCreateRequest() {
     }
 
-    public UsuarioAdminRequest(String nombre, String correo, Boolean activo, Long rolId) {
-        this(nombre, correo, null, activo, rolId);
-    }
-
-    public UsuarioAdminRequest(String nombre, String correo, String password, Boolean activo, Long rolId) {
+    public UsuarioAdminCreateRequest(String nombre, String correo, String password, Boolean activo, Long rolId) {
         this.nombre = nombre;
         this.correo = correo;
         this.password = password;

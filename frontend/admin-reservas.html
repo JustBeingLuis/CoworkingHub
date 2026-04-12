@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todas las Reservas | Coworking</title>
-    <link rel="stylesheet" href="/styles.css?v=20260408i">
+    <title>Gestion de Reservas | Coworking</title>
+    <link rel="stylesheet" href="/styles.css?v=20260412a">
 </head>
 <body>
 <section class="workspace workspace--full">
@@ -12,10 +12,10 @@
         <header class="dashboard-topbar">
             <div>
                 <p class="section-kicker">Sistema de Gestion de Reservas para Coworking</p>
-                <h1 class="dashboard-title">Todas las reservas</h1>
+                <h1 class="dashboard-title">Gestion de reservas</h1>
                 <p class="workspace-copy">
-                    Visualiza todas las reservas registradas en el sistema con su usuario, espacio,
-                    fecha, horario y estado actual.
+                    Administra todas las reservas registradas en el sistema: consulta, actualiza
+                    o elimina registros cuando la operacion lo requiera.
                 </p>
             </div>
         </header>
@@ -26,7 +26,7 @@
                     <div class="form-header">
                         <span class="badge">Administrador</span>
                         <h2>Sesion activa</h2>
-                        <p>Acceso restringido a la visualizacion global de reservas.</p>
+                        <p>Acceso restringido a la gestion global de reservas.</p>
                     </div>
 
                     <div id="admin-reservas-session-summary" class="session-summary">
@@ -39,6 +39,60 @@
                     <button id="admin-reservas-logout-button" type="button" class="secondary-button secondary-button--ghost">
                         Cerrar sesion
                     </button>
+                </article>
+
+                <article class="form-card">
+                    <div class="form-header">
+                        <h2 id="admin-reservation-form-title">Nueva reserva</h2>
+                        <p>Crea reservas desde administracion o selecciona una existente para modificar usuario, espacio, fecha, horario o estado.</p>
+                    </div>
+
+                    <form id="admin-reservation-form">
+                        <label class="field">
+                            <span>Usuario</span>
+                            <select id="admin-reservation-user" class="field-select" required>
+                                <option value="">Selecciona un usuario</option>
+                            </select>
+                        </label>
+
+                        <label class="field">
+                            <span>Espacio</span>
+                            <select id="admin-reservation-space" class="field-select" required>
+                                <option value="">Selecciona un espacio</option>
+                            </select>
+                        </label>
+
+                        <label class="field">
+                            <span>Fecha</span>
+                            <input id="admin-reservation-date" type="date" required>
+                        </label>
+
+                        <div class="report-filter-grid">
+                            <label class="field">
+                                <span>Hora inicio</span>
+                                <input id="admin-reservation-start-time" type="time" required>
+                            </label>
+
+                            <label class="field">
+                                <span>Hora fin</span>
+                                <input id="admin-reservation-end-time" type="time" required>
+                            </label>
+                        </div>
+
+                        <label class="field">
+                            <span>Estado</span>
+                            <select id="admin-reservation-status" class="field-select" required>
+                                <option value="">Selecciona un estado</option>
+                            </select>
+                        </label>
+
+                        <div class="admin-form-actions">
+                            <button id="admin-reservation-submit" type="submit" class="primary-button">Crear reserva</button>
+                            <button id="admin-reservation-reset" type="button" class="secondary-button">Limpiar formulario</button>
+                        </div>
+                    </form>
+
+                    <p id="admin-reservation-form-message" class="form-message" role="status" aria-live="polite"></p>
                 </article>
             </div>
 
@@ -73,6 +127,6 @@
     </div>
 </section>
 
-<script src="/admin-reservas.js?v=20260408i"></script>
+<script src="/admin-reservas.js?v=20260412a"></script>
 </body>
 </html>

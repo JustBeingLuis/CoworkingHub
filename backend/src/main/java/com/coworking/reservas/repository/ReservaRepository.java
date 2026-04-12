@@ -86,6 +86,23 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
                                                        @Param("horaInicio") LocalTime horaInicio,
                                                        @Param("horaFin") LocalTime horaFin);
 
+    @Query("""
+            select r
+            from Reserva r
+            join fetch r.estado er
+            where r.id <> :reservaId
+              and r.espacio.id = :espacioId
+              and r.fecha = :fecha
+              and upper(er.nombre) <> 'CANCELADA'
+              and :horaInicio < r.horaFin
+              and :horaFin > r.horaInicio
+            """)
+    List<Reserva> findConflictosByEspacioFechaYHorarioExcluyendoReserva(@Param("reservaId") Long reservaId,
+                                                                        @Param("espacioId") Long espacioId,
+                                                                        @Param("fecha") LocalDate fecha,
+                                                                        @Param("horaInicio") LocalTime horaInicio,
+                                                                        @Param("horaFin") LocalTime horaFin);
+
     @EntityGraph(attributePaths = {"espacio", "espacio.tipo", "estado"})
     Page<Reserva> findByUsuarioId(Long usuarioId, Pageable pageable);
 

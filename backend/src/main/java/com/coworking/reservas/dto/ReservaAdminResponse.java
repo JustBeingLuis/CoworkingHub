@@ -17,6 +17,7 @@ public class ReservaAdminResponse {
     private LocalTime horaInicio;
     private LocalTime horaFin;
     private LocalDateTime fechaCreacion;
+    private Long estadoId;
     private String estado;
 
     public ReservaAdminResponse() {
@@ -24,7 +25,7 @@ public class ReservaAdminResponse {
 
     public ReservaAdminResponse(Long id, Long usuarioId, String usuarioNombre, String usuarioCorreo, Long espacioId,
                                 String nombreEspacio, String tipoEspacio, LocalDate fecha, LocalTime horaInicio,
-                                LocalTime horaFin, LocalDateTime fechaCreacion, String estado) {
+                                LocalTime horaFin, LocalDateTime fechaCreacion, Long estadoId, String estado) {
         this.id = id;
         this.usuarioId = usuarioId;
         this.usuarioNombre = usuarioNombre;
@@ -36,6 +37,7 @@ public class ReservaAdminResponse {
         this.horaInicio = horaInicio;
         this.horaFin = horaFin;
         this.fechaCreacion = fechaCreacion;
+        this.estadoId = estadoId;
         this.estado = estado;
     }
 
@@ -125,6 +127,14 @@ public class ReservaAdminResponse {
 
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
         this.fechaCreacion = fechaCreacion;
+    }
+
+    public Long getEstadoId() {
+        return estadoId;
+    }
+
+    public void setEstadoId(Long estadoId) {
+        this.estadoId = estadoId;
     }
 
     public String getEstado() {

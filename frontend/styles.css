@@ -723,9 +723,16 @@ body.modal-open {
 .reservation-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .reservation-cancel-button {
+    width: auto;
+    margin-top: 0;
+}
+
+.reservation-actions--admin .secondary-button {
     width: auto;
     margin-top: 0;
 }

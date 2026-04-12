@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion de Usuarios | Coworking</title>
-    <link rel="stylesheet" href="/styles.css?v=20260408j">
+    <link rel="stylesheet" href="/styles.css?v=20260412a">
 </head>
 <body>
 <section class="workspace workspace--full">
@@ -33,7 +33,7 @@
                         Cargando informacion de la cuenta...
                     </div>
                     <a href="/admin-espacios.html" class="secondary-button secondary-link-button">Gestionar espacios</a>
-                    <a href="/admin-reservas.html" class="secondary-button secondary-link-button">Ver reservas</a>
+                    <a href="/admin-reservas.html" class="secondary-button secondary-link-button">Gestionar reservas</a>
                     <a href="/admin-reportes.html" class="secondary-button secondary-link-button">Ver reportes</a>
                     <a href="/dashboard.html" class="secondary-button secondary-link-button">Volver al panel</a>
                     <button id="admin-users-logout-button" type="button" class="secondary-button secondary-button--ghost">
@@ -43,8 +43,8 @@
 
                 <article class="form-card">
                     <div class="form-header">
-                        <h2 id="admin-user-form-title">Editar usuario</h2>
-                        <p>Selecciona un usuario del listado para actualizar sus datos, su rol o su estado de acceso.</p>
+                        <h2 id="admin-user-form-title">Nuevo usuario</h2>
+                        <p>Crea cuentas nuevas o selecciona un usuario del listado para actualizar sus datos, rol o estado de acceso.</p>
                     </div>
 
                     <form id="admin-user-form">
@@ -56,6 +56,11 @@
                         <label class="field">
                             <span>Correo</span>
                             <input id="admin-user-email" type="email" maxlength="150" required>
+                        </label>
+
+                        <label class="field">
+                            <span>Contrasena</span>
+                            <input id="admin-user-password" type="password" minlength="8" autocomplete="new-password">
                         </label>
 
                         <label class="field">
@@ -71,8 +76,8 @@
                         </label>
 
                         <div class="admin-form-actions">
-                            <button id="admin-user-submit" type="submit" class="primary-button">Guardar cambios</button>
-                            <button id="admin-user-reset" type="button" class="secondary-button">Limpiar seleccion</button>
+                            <button id="admin-user-submit" type="submit" class="primary-button">Crear usuario</button>
+                            <button id="admin-user-reset" type="button" class="secondary-button">Limpiar formulario</button>
                         </div>
                     </form>
 
@@ -111,6 +116,6 @@
     </div>
 </section>
 
-<script src="/admin-usuarios.js?v=20260408j"></script>
+<script src="/admin-usuarios.js?v=20260412a"></script>
 </body>
 </html>

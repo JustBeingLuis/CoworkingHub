@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.dto.RolOptionResponse;
+import com.coworking.reservas.dto.UsuarioAdminCreateRequest;
 import com.coworking.reservas.dto.UsuarioAdminListadoResponse;
 import com.coworking.reservas.dto.UsuarioAdminRequest;
 import com.coworking.reservas.dto.UsuarioAdminResponse;
@@ -17,6 +18,8 @@ public interface IUsuarioService {
     UsuarioAdminListadoResponse consultarUsuariosParaAdministracion(int page, int size);
 
     UsuarioAdminResponse buscarUsuarioParaAdministracion(Long usuarioId);
+
+    UsuarioAdminResponse crearUsuarioComoAdministrador(UsuarioAdminCreateRequest usuarioAdminCreateRequest);
 
     UsuarioAdminResponse actualizarUsuarioComoAdministrador(Long usuarioId, UsuarioAdminRequest usuarioAdminRequest,
                                                            String correoAdminAutenticado);

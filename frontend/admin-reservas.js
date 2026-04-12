@@ -4,6 +4,17 @@ const adminReservasMessage = document.getElementById("admin-reservas-message");
 const adminReservasSummary = document.getElementById("admin-reservas-summary");
 const adminReservasGrid = document.getElementById("admin-reservas-grid");
 const adminReservasPagination = document.getElementById("admin-reservas-pagination");
+const adminReservationForm = document.getElementById("admin-reservation-form");
+const adminReservationFormTitle = document.getElementById("admin-reservation-form-title");
+const adminReservationUser = document.getElementById("admin-reservation-user");
+const adminReservationSpace = document.getElementById("admin-reservation-space");
+const adminReservationDate = document.getElementById("admin-reservation-date");
+const adminReservationStartTime = document.getElementById("admin-reservation-start-time");
+const adminReservationEndTime = document.getElementById("admin-reservation-end-time");
+const adminReservationStatus = document.getElementById("admin-reservation-status");
+const adminReservationSubmit = document.getElementById("admin-reservation-submit");
+const adminReservationReset = document.getElementById("admin-reservation-reset");
+const adminReservationFormMessage = document.getElementById("admin-reservation-form-message");
 
 const TOKEN_KEY = "coworking_access_token";
 const LOGIN_URL = "/index.html";
@@ -11,14 +22,44 @@ const DASHBOARD_URL = "/dashboard.html";
 const ADMIN_RESERVAS_PAGE_SIZE = 6;
 
 let currentAdminReservasPage = 0;
+let currentEditingReservationId = null;
 
 adminReservasLogoutButton.addEventListener("click", () => {
     clearSession();
     window.location.assign(LOGIN_URL);
 });
 
+adminReservationForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await saveReservationAsAdmin();
+});
+
+adminReservationReset.addEventListener("click", () => {
+    resetAdminReservationForm();
+});
+
 adminReservasGrid.addEventListener("click", async (event) => {
     const cancelButton = event.target.closest("[data-cancel-reservation-id]");
+    const editButton = event.target.closest("[data-edit-reservation-id]");
+    const deleteButton = event.target.closest("[data-delete-reservation-id]");
+
+    if (editButton) {
+        const reservationId = Number(editButton.dataset.editReservationId);
+
+        if (Number.isInteger(reservationId)) {
+            await loadReservationIntoForm(reservationId);
+        }
+        return;
+    }
+
+    if (deleteButton && !deleteButton.disabled) {
+        const reservationId = Number(deleteButton.dataset.deleteReservationId);
+
+        if (Number.isInteger(reservationId)) {
+            await deleteReservationAsAdmin(reservationId, deleteButton);
+        }
+        return;
+    }
 
     if (!cancelButton || cancelButton.disabled) {
         return;
@@ -63,6 +104,7 @@ async function hydrateAdminReservasView() {
         return;
     }
 
+    await loadReservationOptions();
     await loadAdminReservas(currentAdminReservasPage, false);
 }
 
@@ -107,6 +149,74 @@ async function loadSessionAndAuthorize() {
     }
 }
 
+async function loadReservationOptions() {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    try {
+        const [usersResponse, spacesResponse, statesResponse] = await Promise.all([
+            fetch("/api/admin/reservas/usuarios", {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` }
+            }),
+            fetch("/api/admin/reservas/espacios", {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` }
+            }),
+            fetch("/api/admin/reservas/estados", {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` }
+            })
+        ]);
+
+        const users = await usersResponse.json().catch(() => ([]));
+        const spaces = await spacesResponse.json().catch(() => ([]));
+        const states = await statesResponse.json().catch(() => ([]));
+
+        if (!usersResponse.ok || !spacesResponse.ok || !statesResponse.ok) {
+            if ([usersResponse.status, spacesResponse.status, statesResponse.status].includes(401)
+                    || [usersResponse.status, spacesResponse.status, statesResponse.status].includes(403)) {
+                clearSession();
+                window.location.replace(
+                    [usersResponse.status, spacesResponse.status, statesResponse.status].includes(403)
+                        ? DASHBOARD_URL
+                        : LOGIN_URL
+                );
+                return;
+            }
+
+            showMessage(adminReservationFormMessage, "No fue posible cargar las opciones del formulario.", "error");
+            return;
+        }
+
+        adminReservationUser.innerHTML = `
+            <option value="">Selecciona un usuario</option>
+            ${users.map((user) => `
+                <option value="${user.id}">
+                    ${escapeHtml(user.nombre || "")} - ${escapeHtml(user.correo || "")}${user.activo ? "" : " (inactivo)"}
+                </option>
+            `).join("")}
+        `;
+
+        adminReservationSpace.innerHTML = `
+            <option value="">Selecciona un espacio</option>
+            ${spaces.map((space) => `
+                <option value="${space.id}">
+                    ${escapeHtml(space.nombre || "")} - ${escapeHtml(space.tipoNombre || "Tipo")}${space.activo ? "" : " (inactivo)"}
+                </option>
+            `).join("")}
+        `;
+
+        adminReservationStatus.innerHTML = `
+            <option value="">Selecciona un estado</option>
+            ${states.map((state) => `
+                <option value="${state.id}">${escapeHtml(formatStatusLabel(state.nombre || ""))}</option>
+            `).join("")}
+        `;
+    } catch (error) {
+        showMessage(adminReservationFormMessage, "No fue posible conectar con el backend.", "error");
+    }
+}
+
 async function loadAdminReservas(page = currentAdminReservasPage, showFeedback = true) {
     const token = localStorage.getItem(TOKEN_KEY);
 
@@ -133,6 +243,11 @@ async function loadAdminReservas(page = currentAdminReservasPage, showFeedback =
             }
 
             showMessage(adminReservasMessage, data.message || "No fue posible consultar las reservas.", "error");
+            return;
+        }
+
+        if (page > 0 && (!data.pagina?.content || data.pagina.content.length === 0) && Number(data.pagina?.totalElements || 0) > 0) {
+            await loadAdminReservas(page - 1, false);
             return;
         }
 
@@ -222,8 +337,15 @@ function renderReservasGrid(reservas) {
                     </div>
                 </div>
 
-                ${estado === "CONFIRMADA" ? `
-                    <div class="reservation-actions">
+                <div class="reservation-actions reservation-actions--admin">
+                    <button
+                        type="button"
+                        class="secondary-button reservation-cancel-button"
+                        data-edit-reservation-id="${reserva.id}"
+                    >
+                        Editar
+                    </button>
+                    ${estado === "CONFIRMADA" ? `
                         <button
                             type="button"
                             class="secondary-button reservation-cancel-button"
@@ -231,11 +353,121 @@ function renderReservasGrid(reservas) {
                         >
                             Cancelar
                         </button>
-                    </div>
-                ` : ""}
+                    ` : ""}
+                    <button
+                        type="button"
+                        class="secondary-button reservation-cancel-button"
+                        data-delete-reservation-id="${reserva.id}"
+                    >
+                        Eliminar
+                    </button>
+                </div>
             </article>
         `;
     }).join("");
+}
+
+async function loadReservationIntoForm(reservationId) {
+    const token = localStorage.getItem(TOKEN_KEY);
+    toggleLoading(adminReservationSubmit, true, "Cargando...");
+
+    try {
+        const response = await fetch(`/api/admin/reservas/${reservationId}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                clearSession();
+                window.location.replace(response.status === 403 ? DASHBOARD_URL : LOGIN_URL);
+                return;
+            }
+
+            showMessage(adminReservationFormMessage, data.message || "No fue posible cargar la reserva.", "error");
+            return;
+        }
+
+        currentEditingReservationId = data.id;
+        adminReservationFormTitle.textContent = `Editar reserva #${data.id}`;
+        adminReservationUser.value = data.usuarioId || "";
+        adminReservationSpace.value = data.espacioId || "";
+        adminReservationStatus.value = data.estadoId || "";
+        adminReservationDate.value = data.fecha || "";
+        adminReservationStartTime.value = formatTime(data.horaInicio);
+        adminReservationEndTime.value = formatTime(data.horaFin);
+        adminReservationSubmit.textContent = "Guardar cambios";
+        adminReservationSubmit.dataset.defaultText = "Guardar cambios";
+
+        showMessage(adminReservationFormMessage, `Editando la reserva #${data.id}.`, "success");
+        adminReservationUser.focus();
+    } catch (error) {
+        showMessage(adminReservationFormMessage, "No fue posible conectar con el backend.", "error");
+    } finally {
+        toggleLoading(adminReservationSubmit, false);
+    }
+}
+
+async function saveReservationAsAdmin() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const isEditing = Number.isInteger(currentEditingReservationId);
+    const payload = buildReservationPayload();
+
+    if (!payload) {
+        return;
+    }
+
+    const url = isEditing ? `/api/admin/reservas/${currentEditingReservationId}` : "/api/admin/reservas";
+    const method = isEditing ? "PUT" : "POST";
+
+    toggleLoading(adminReservationSubmit, true, isEditing ? "Guardando..." : "Creando...");
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                clearSession();
+                window.location.replace(response.status === 403 ? DASHBOARD_URL : LOGIN_URL);
+                return;
+            }
+
+            showMessage(adminReservationFormMessage, data.message || "No fue posible guardar la reserva.", "error");
+            return;
+        }
+
+        await loadAdminReservas(currentAdminReservasPage, false);
+        if (isEditing) {
+            await loadReservationIntoForm(data.id);
+        } else {
+            resetAdminReservationForm(false);
+        }
+
+        showMessage(
+            adminReservasMessage,
+            isEditing
+                ? `La reserva #${data.id} fue actualizada correctamente.`
+                : `La reserva #${data.id} fue creada correctamente.`,
+            "success"
+        );
+    } catch (error) {
+        showMessage(adminReservationFormMessage, "No fue posible conectar con el backend.", "error");
+    } finally {
+        toggleLoading(adminReservationSubmit, false);
+    }
 }
 
 async function cancelReservationAsAdmin(reservationId, button) {
@@ -278,6 +510,96 @@ async function cancelReservationAsAdmin(reservationId, button) {
     } finally {
         toggleLoading(button, false);
     }
+}
+
+async function deleteReservationAsAdmin(reservationId, button) {
+    if (!window.confirm("Esta reserva se eliminara definitivamente del sistema. Deseas continuar?")) {
+        return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    toggleLoading(button, true, "Eliminando...");
+
+    try {
+        const response = await fetch(`/api/admin/reservas/${reservationId}`, {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+
+            if (response.status === 401 || response.status === 403) {
+                clearSession();
+                window.location.replace(response.status === 403 ? DASHBOARD_URL : LOGIN_URL);
+                return;
+            }
+
+            showMessage(adminReservasMessage, data.message || "No fue posible eliminar la reserva.", "error");
+            return;
+        }
+
+        if (currentEditingReservationId === reservationId) {
+            resetAdminReservationForm(false);
+        }
+
+        await loadAdminReservas(currentAdminReservasPage, false);
+        showMessage(adminReservasMessage, `La reserva #${reservationId} fue eliminada correctamente.`, "success");
+    } catch (error) {
+        showMessage(adminReservasMessage, "No fue posible conectar con el backend.", "error");
+    } finally {
+        toggleLoading(button, false);
+    }
+}
+
+function buildReservationPayload() {
+    const usuarioId = Number(adminReservationUser.value);
+    const espacioId = Number(adminReservationSpace.value);
+    const estadoId = Number(adminReservationStatus.value);
+    const fecha = adminReservationDate.value;
+    const horaInicio = adminReservationStartTime.value;
+    const horaFin = adminReservationEndTime.value;
+
+    if (!Number.isInteger(usuarioId) || usuarioId < 1) {
+        showMessage(adminReservationFormMessage, "Debes seleccionar un usuario valido.", "error");
+        return null;
+    }
+
+    if (!Number.isInteger(espacioId) || espacioId < 1) {
+        showMessage(adminReservationFormMessage, "Debes seleccionar un espacio valido.", "error");
+        return null;
+    }
+
+    if (!Number.isInteger(estadoId) || estadoId < 1) {
+        showMessage(adminReservationFormMessage, "Debes seleccionar un estado valido.", "error");
+        return null;
+    }
+
+    if (!fecha) {
+        showMessage(adminReservationFormMessage, "Debes indicar la fecha de la reserva.", "error");
+        return null;
+    }
+
+    if (!horaInicio || !horaFin) {
+        showMessage(adminReservationFormMessage, "Debes indicar la hora de inicio y la hora de fin.", "error");
+        return null;
+    }
+
+    if (horaInicio >= horaFin) {
+        showMessage(adminReservationFormMessage, "La hora de inicio debe ser anterior a la hora de fin.", "error");
+        return null;
+    }
+
+    return {
+        usuarioId,
+        espacioId,
+        estadoId,
+        fecha,
+        horaInicio,
+        horaFin
+    };
 }
 
 function renderPagination(target, pageData, itemLabel) {
@@ -345,6 +667,18 @@ function buildEmptyPageData(pageNumber, pageSize) {
     };
 }
 
+function resetAdminReservationForm(clearMessage = true) {
+    currentEditingReservationId = null;
+    adminReservationFormTitle.textContent = "Nueva reserva";
+    adminReservationForm.reset();
+    adminReservationSubmit.textContent = "Crear reserva";
+    adminReservationSubmit.dataset.defaultText = "Crear reserva";
+
+    if (clearMessage) {
+        showMessage(adminReservationFormMessage, "", "");
+    }
+}
+
 function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
 }
@@ -381,6 +715,24 @@ function formatDateTime(value) {
 
 function formatTime(value) {
     return String(value || "").slice(0, 5);
+}
+
+function formatStatusLabel(value) {
+    const normalized = String(value || "").toUpperCase();
+
+    if (normalized === "CONFIRMADA") {
+        return "Confirmada";
+    }
+
+    if (normalized === "CANCELADA") {
+        return "Cancelada";
+    }
+
+    if (normalized === "FINALIZADA") {
+        return "Finalizada";
+    }
+
+    return value;
 }
 
 function showMessage(target, message, type) {

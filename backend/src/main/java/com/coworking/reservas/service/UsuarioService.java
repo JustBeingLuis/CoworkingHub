@@ -7,6 +7,7 @@ import com.coworking.reservas.domain.Rol;
 import com.coworking.reservas.domain.Usuario;
 import com.coworking.reservas.dto.PageResponse;
 import com.coworking.reservas.dto.RolOptionResponse;
+import com.coworking.reservas.dto.UsuarioAdminCreateRequest;
 import com.coworking.reservas.dto.UsuarioAdminListadoResponse;
 import com.coworking.reservas.dto.UsuarioAdminRequest;
 import com.coworking.reservas.dto.UsuarioAdminResponse;
@@ -102,6 +103,32 @@ public class UsuarioService implements IUsuarioService {
     }
 
     @Override
+    public UsuarioAdminResponse crearUsuarioComoAdministrador(UsuarioAdminCreateRequest usuarioAdminCreateRequest) {
+        validarSolicitudAdminCreacion(usuarioAdminCreateRequest);
+
+        String correoNormalizado = usuarioAdminCreateRequest.getCorreo().trim().toLowerCase();
+
+        if (usuarioRepository.existsByCorreoIgnoreCase(correoNormalizado)) {
+            throw new IllegalArgumentException("El correo ya se encuentra registrado.");
+        }
+
+        Rol rol = rolRepository.findById(usuarioAdminCreateRequest.getRolId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontro un rol con el id " + usuarioAdminCreateRequest.getRolId()
+                ));
+
+        Usuario usuario = new Usuario();
+        usuario.setNombre(usuarioAdminCreateRequest.getNombre().trim());
+        usuario.setCorreo(correoNormalizado);
+        usuario.setPassword(passwordEncoder.encode(usuarioAdminCreateRequest.getPassword()));
+        usuario.setActivo(usuarioAdminCreateRequest.getActivo());
+        usuario.setFechaRegistro(LocalDateTime.now());
+        usuario.setRol(rol);
+
+        return mapToAdminResponse(usuarioRepository.save(usuario));
+    }
+
+    @Override
     public UsuarioAdminResponse actualizarUsuarioComoAdministrador(Long usuarioId, UsuarioAdminRequest usuarioAdminRequest,
                                                                   String correoAdminAutenticado) {
         if (usuarioId == null) {
@@ -130,6 +157,10 @@ public class UsuarioService implements IUsuarioService {
         usuario.setCorreo(correoNormalizado);
         usuario.setActivo(usuarioAdminRequest.getActivo());
         usuario.setRol(rol);
+
+        if (usuarioAdminRequest.getPassword() != null && !usuarioAdminRequest.getPassword().isBlank()) {
+            usuario.setPassword(passwordEncoder.encode(usuarioAdminRequest.getPassword()));
+        }
 
         return mapToAdminResponse(usuarioRepository.save(usuario));
     }
@@ -188,6 +219,34 @@ public class UsuarioService implements IUsuarioService {
         }
 
         if (usuarioAdminRequest.getActivo() == null) {
+            throw new IllegalArgumentException("Debes indicar si el usuario esta activo.");
+        }
+
+        if (usuarioAdminRequest.getPassword() != null
+                && !usuarioAdminRequest.getPassword().isBlank()
+                && usuarioAdminRequest.getPassword().length() < 8) {
+            throw new IllegalArgumentException("La nueva contrasena debe tener minimo 8 caracteres.");
+        }
+    }
+
+    private void validarSolicitudAdminCreacion(UsuarioAdminCreateRequest usuarioAdminCreateRequest) {
+        if (usuarioAdminCreateRequest.getNombre() == null || usuarioAdminCreateRequest.getNombre().trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre es obligatorio.");
+        }
+
+        if (usuarioAdminCreateRequest.getCorreo() == null || usuarioAdminCreateRequest.getCorreo().trim().isEmpty()) {
+            throw new IllegalArgumentException("El correo es obligatorio.");
+        }
+
+        if (usuarioAdminCreateRequest.getPassword() == null || usuarioAdminCreateRequest.getPassword().length() < 8) {
+            throw new IllegalArgumentException("La contrasena debe tener minimo 8 caracteres.");
+        }
+
+        if (usuarioAdminCreateRequest.getRolId() == null) {
+            throw new IllegalArgumentException("Debes seleccionar un rol.");
+        }
+
+        if (usuarioAdminCreateRequest.getActivo() == null) {
             throw new IllegalArgumentException("Debes indicar si el usuario esta activo.");
         }
     }
