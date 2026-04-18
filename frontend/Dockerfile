@@ -1,11 +1,16 @@
-# Usa la imagen oficial de Nginx basada en Alpine (ligera)
+# Stage 1: Build the React application
+FROM node:20-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve the application using Nginx
 FROM nginx:alpine
-
-# Copia los archivos estáticos a la carpeta de publicación de Nginx
-COPY ./ /usr/share/nginx/html
-
-# Sobrescribe la configuración por defecto de Nginx con nuestra configuración de proxy
+# Copy the built assets from the previous stage
+COPY --from=build /app/dist /usr/share/nginx/html
+# Overwrite the default Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Redirigir el puerto en caso de ser necesario
 EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,102 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoworkingHub | Sistema de Gestion de Reservas</title>
-    <link rel="stylesheet" href="/styles.css?v=20260413h">
-</head>
-<body>
-<main class="layout">
-    <section class="hero" style="display: flex; flex-direction: column; justify-content: center; padding: 40px 0;">
-        <div>
-            <p class="eyebrow" style="margin-bottom: 8px;">Bienvenido a</p>
-            <h1 style="font-size: clamp(3.2rem, 6vw, 5.5rem);">CoworkingHub</h1>
-            <p class="lead" style="margin-top: 24px; font-size: 1.15rem; max-width: 52ch;">
-                Reserva escritorios, salas y oficinas desde una sola cuenta.
-                Crea tu perfil o inicia sesion para entrar a la plataforma y comenzar a gestionar
-                tus espacios de trabajo compartido con acceso seguro.
-            </p>
-        </div>
-
-        <div class="info-grid" style="margin-top: 64px;">
-            <article class="info-card">
-                <h2>Espacios listos para tu jornada</h2>
-                <ul>
-                    <li>Escritorios individuales para trabajo flexible.</li>
-                    <li>Salas de reuniones para equipos y clientes.</li>
-                    <li>Oficinas privadas para sesiones de mayor concentracion.</li>
-                </ul>
-            </article>
-
-            <article class="info-card">
-                <h2>Acceso rapido y seguro</h2>
-                <ul>
-                    <li>Registro con correo unico y contrasena segura.</li>
-                    <li>Inicio de sesion con autenticacion protegida.</li>
-                    <li>Ingreso directo al panel interno del coworking.</li>
-                </ul>
-            </article>
-        </div>
-    </section>
-
-    <section class="panel stack">
-        <form id="registro-form" class="form-card" novalidate>
-            <div class="form-header">
-                <span class="badge">Crear cuenta</span>
-                <h2>Registrate</h2>
-                <p>Completa tus datos para acceder al sistema de reservas.</p>
-            </div>
-
-            <label class="field">
-                <span>Nombre completo</span>
-                <input id="nombre" name="nombre" type="text" maxlength="100" placeholder="Ej. Pablo Rodriguez" required>
-            </label>
-
-            <label class="field">
-                <span>Correo electronico</span>
-                <input id="correoRegistro" name="correoRegistro" type="email" maxlength="150" placeholder="usuario@correo.com" required>
-            </label>
-
-            <label class="field">
-                <span>Contrasena</span>
-                <input id="passwordRegistro" name="passwordRegistro" type="password" minlength="8" placeholder="Minimo 8 caracteres" required>
-            </label>
-
-            <label class="field">
-                <span>Confirmar contrasena</span>
-                <input id="confirmacionPassword" name="confirmacionPassword" type="password" minlength="8" placeholder="Repite la contrasena" required>
-            </label>
-
-            <button id="submit-button" type="submit" class="primary-button">Crear mi cuenta</button>
-            <p style="text-align: center; margin-top: 15px; font-size: 0.94rem; color: var(--ink-soft);">¿Ya tienes cuenta? <button type="button" id="show-login" style="background: none; border: none; font-weight: bold; color: var(--accent); cursor: pointer; padding: 0; font: inherit;">Inicia sesión</button></p>
-            <p id="registro-message" class="form-message" role="status" aria-live="polite"></p>
-        </form>
-
-        <form id="login-form" class="form-card" novalidate hidden>
-            <div class="form-header">
-                <span class="badge">Acceso</span>
-                <h2>Inicia sesion</h2>
-                <p>Entra con tu correo y contrasena para continuar al panel de espacios.</p>
-            </div>
-
-            <label class="field">
-                <span>Correo electronico</span>
-                <input id="correoLogin" name="correoLogin" type="email" maxlength="150" placeholder="usuario@correo.com" required>
-            </label>
-
-            <label class="field">
-                <span>Contrasena</span>
-                <input id="passwordLogin" name="passwordLogin" type="password" placeholder="Tu contrasena" required>
-            </label>
-
-            <button id="login-button" type="submit" class="primary-button">Entrar al sistema</button>
-            <p style="text-align: center; margin-top: 15px; font-size: 0.94rem; color: var(--ink-soft);">¿No tienes cuenta? <button type="button" id="show-register" style="background: none; border: none; font-weight: bold; color: var(--accent); cursor: pointer; padding: 0; font: inherit;">Regístrate</button></p>
-            <p id="login-message" class="form-message" role="status" aria-live="polite"></p>
-        </form>
-    </section>
-</main>
-
-<script src="/auth.js?v=20260413h"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CoworkingHub</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
