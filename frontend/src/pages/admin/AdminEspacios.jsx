@@ -12,13 +12,13 @@ const SPACES_PAGE_SIZE = 10;
 const AdminEspacios = () => {
   const { t } = useTranslation();
   const [spacesData, setSpacesData] = useState({ content: [], pageNumber: 0, totalPages: 0, totalElements: 0 });
-  const [spaceTypes, setSpaceTypes] = useState([]);
+  const [spaceTypes, setSpaceTypes] = useState([]); // Array of { id, nombre, descripcion }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Form & Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formData, setFormData] = useState({ nombre: '', tipo: '', capacidad: 1, precioPorHora: 0 });
+  const [formData, setFormData] = useState({ nombre: '', tipoId: '', capacidad: 1, precioPorHora: 0, activo: true });
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -27,7 +27,8 @@ const AdminEspacios = () => {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), size: String(SPACES_PAGE_SIZE) });
       const data = await fetchApi(`/api/admin/espacios?${params.toString()}`);
-      setSpacesData(data.pagina || { content: [], pageNumber: 0, totalPages: 0, totalElements: 0 });
+      // Backend returns PageResponse directly (content, pageNumber, etc. at root)
+      setSpacesData(data || { content: [], pageNumber: 0, totalPages: 0, totalElements: 0 });
     } catch (err) {
       setError(t('common.errorLoading'));
     } finally {
@@ -37,11 +38,9 @@ const AdminEspacios = () => {
 
   const loadTypes = async () => {
     try {
+      // Backend returns List<TipoEspacioResponse> = [{ id: 1, nombre: "Escritorio", descripcion: "..." }, ...]
       const types = await fetchApi('/api/admin/espacios/tipos-espacio');
       setSpaceTypes(types || []);
-      if (types?.length > 0) {
-        setFormData(prev => ({ ...prev, tipo: types[0] }));
-      }
     } catch (err) {
       console.error("Error loading types", err);
     }
@@ -54,17 +53,19 @@ const AdminEspacios = () => {
 
   const openNewForm = () => {
     setEditingId(null);
-    setFormData({ nombre: '', tipo: spaceTypes[0] || '', capacidad: 1, precioPorHora: 0 });
+    setFormData({ nombre: '', tipoId: spaceTypes[0]?.id || '', capacidad: 1, precioPorHora: 0, activo: true });
     setIsFormOpen(true);
   };
 
   const openEditForm = (space) => {
     setEditingId(space.id);
+    // Backend response has: id, nombre, capacidad, precioPorHora, activo, tipoId, tipoNombre
     setFormData({ 
       nombre: space.nombre, 
-      tipo: space.tipo, 
+      tipoId: space.tipoId, 
       capacidad: space.capacidad, 
-      precioPorHora: space.precioPorHora 
+      precioPorHora: space.precioPorHora,
+      activo: space.activo
     });
     setIsFormOpen(true);
   };
@@ -76,9 +77,16 @@ const AdminEspacios = () => {
       const url = editingId ? `/api/admin/espacios/${editingId}` : '/api/admin/espacios';
       const method = editingId ? 'PUT' : 'POST';
       
+      // Backend expects EspacioAdminRequest: { nombre, capacidad, precioPorHora, activo, tipoId }
       await fetchApi(url, {
         method,
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          capacidad: formData.capacidad,
+          precioPorHora: formData.precioPorHora,
+          activo: formData.activo,
+          tipoId: Number(formData.tipoId)
+        })
       });
       
       setIsFormOpen(false);
@@ -89,6 +97,8 @@ const AdminEspacios = () => {
       setSaving(false);
     }
   };
+
+  const selectClasses = "flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-slate-500";
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -125,7 +135,7 @@ const AdminEspacios = () => {
                 {spacesData.content.map(space => (
                   <tr key={space.id} className="hover:bg-slate-50 dark:hover:bg-zinc-900/50">
                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{space.nombre}</td>
-                    <td className="px-6 py-4">{space.tipo}</td>
+                    <td className="px-6 py-4">{t(`admin.spaceTypes.${space.tipoNombre}`, space.tipoNombre)}</td>
                     <td className="px-6 py-4">{space.capacidad}</td>
                     <td className="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">${space.precioPorHora?.toLocaleString()}</td>
                     <td className="px-6 py-4">
@@ -183,13 +193,13 @@ const AdminEspacios = () => {
             <Label htmlFor="tipo">{t('admin.spaces.typeLabel')}</Label>
             <select 
               id="tipo" 
-              className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:focus:ring-slate-500"
-              value={formData.tipo}
-              onChange={e => setFormData({...formData, tipo: e.target.value})}
+              className={selectClasses}
+              value={formData.tipoId}
+              onChange={e => setFormData({...formData, tipoId: e.target.value})}
               required
             >
               <option value="" disabled className="dark:bg-zinc-900">Seleccionar...</option>
-              {spaceTypes.map(t => <option key={t} value={t} className="dark:bg-zinc-900">{t}</option>)}
+              {spaceTypes.map(tipo => <option key={tipo.id} value={tipo.id} className="dark:bg-zinc-900">{tipo.nombre}</option>)}
             </select>
           </div>
           <div className="flex gap-4">

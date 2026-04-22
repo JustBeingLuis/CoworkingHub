@@ -18,7 +18,7 @@ const AdminUsuarios = () => {
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [roles, setRoles] = useState([]);
+  const [roles, setRoles] = useState([]); // Array of { id, nombre }
   const [saving, setSaving] = useState(false);
 
   const loadUsers = async (page = 0) => {
@@ -26,6 +26,7 @@ const AdminUsuarios = () => {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), size: String(USERS_PAGE_SIZE) });
       const res = await fetchApi(`/api/admin/usuarios?${params.toString()}`);
+      // Backend returns { pagina: { content, pageNumber, ... }, resumen: { ... } }
       setData(res.pagina || { content: [], pageNumber: 0, totalPages: 0, totalElements: 0 });
     } catch (err) {
       setError(t('common.errorLoading'));
@@ -36,6 +37,7 @@ const AdminUsuarios = () => {
 
   const loadRoles = async () => {
     try {
+      // Backend returns List<RolOptionResponse> = [{ id: 1, nombre: "ADMIN" }, { id: 2, nombre: "USUARIO" }]
       const res = await fetchApi('/api/admin/usuarios/roles');
       setRoles(res || []);
     } catch (err) {
@@ -49,7 +51,14 @@ const AdminUsuarios = () => {
   }, []);
 
   const handleEditClick = (user) => {
-    setEditingUser({ ...user });
+    // user from backend has: id, nombre, correo, activo, rolId, rolNombre
+    setEditingUser({
+      id: user.id,
+      nombre: user.nombre,
+      correo: user.correo,
+      activo: user.activo,
+      rolId: user.rolId
+    });
     setIsEditOpen(true);
   };
 
@@ -57,9 +66,15 @@ const AdminUsuarios = () => {
     e.preventDefault();
     try {
       setSaving(true);
+      // Backend expects UsuarioAdminRequest: { nombre, correo, password?, activo, rolId }
       await fetchApi(`/api/admin/usuarios/${editingUser.id}`, {
         method: 'PUT',
-        body: JSON.stringify(editingUser)
+        body: JSON.stringify({
+          nombre: editingUser.nombre,
+          correo: editingUser.correo,
+          activo: editingUser.activo,
+          rolId: editingUser.rolId
+        })
       });
       setIsEditOpen(false);
       loadUsers(data.pageNumber);
@@ -73,15 +88,18 @@ const AdminUsuarios = () => {
   const handleToggleEstado = async (userId, currentState) => {
     if (!window.confirm(currentState ? t('admin.users.confirmDesact') : t('admin.users.activate'))) return;
     try {
-      await fetchApi(`/api/admin/usuarios/${userId}/estado`, {
-        method: 'PATCH',
-        body: JSON.stringify({ activo: !currentState })
+      // Backend expects @RequestParam Boolean activo (query parameter, NOT body)
+      const newState = !currentState;
+      await fetchApi(`/api/admin/usuarios/${userId}/estado?activo=${newState}`, {
+        method: 'PATCH'
       });
       loadUsers(data.pageNumber);
     } catch (err) {
       alert(err.message || 'Error changing status');
     }
   };
+
+  const selectClasses = "flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-slate-500";
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -114,7 +132,7 @@ const AdminUsuarios = () => {
                     <td className="px-6 py-4">{user.correo}</td>
                     <td className="px-6 py-4">
                       <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
-                        {user.rol}
+                        {user.rolNombre}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -141,6 +159,13 @@ const AdminUsuarios = () => {
                     </td>
                   </tr>
                 ))}
+                {data.content.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
+                      {t('admin.users.noData')}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -174,13 +199,13 @@ const AdminUsuarios = () => {
               <Label htmlFor="rol">{t('admin.users.roleLabel')}</Label>
               <select 
                 id="rol" 
-                className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:focus:ring-slate-500"
-                value={editingUser.rol}
-                onChange={e => setEditingUser({...editingUser, rol: e.target.value})}
+                className={selectClasses}
+                value={editingUser.rolId}
+                onChange={e => setEditingUser({...editingUser, rolId: Number(e.target.value)})}
                 required
               >
                 <option value="" disabled className="dark:bg-zinc-900">Seleccionar...</option>
-                {roles.map(r => <option key={r} value={r} className="dark:bg-zinc-900">{r}</option>)}
+                {roles.map(r => <option key={r.id} value={r.id} className="dark:bg-zinc-900">{r.nombre}</option>)}
               </select>
             </div>
 

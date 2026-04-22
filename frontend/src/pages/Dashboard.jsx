@@ -54,12 +54,58 @@ const Dashboard = () => {
     loadSpaces(0);
   }, []);
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const getStartHourOptions = () => {
+    const currentHour = new Date().getHours();
+    const isToday = availabilityForm.fecha === todayStr;
+    return [...Array(14)].map((_, i) => i + 7)
+      .filter(h => !isToday || h > currentHour)
+      .map(h => String(h).padStart(2, '0') + ':00');
+  };
+
+  const getEndHourOptions = () => {
+    const startHour = availabilityForm.horaInicio
+      ? parseInt(availabilityForm.horaInicio.split(':')[0], 10)
+      : null;
+    return [...Array(14)].map((_, i) => i + 8)
+      .filter(h => startHour === null || h > startHour)
+      .map(h => String(h).padStart(2, '0') + ':00');
+  };
+
+  const handleDateChange = (newDate) => {
+    // Clamp: if user typed a past date, force it to today
+    const validDate = (!newDate || newDate < todayStr) ? todayStr : newDate;
+
+    const currentHour = new Date().getHours();
+    const isToday = validDate === todayStr;
+    const currentStart = availabilityForm.horaInicio
+      ? parseInt(availabilityForm.horaInicio.split(':')[0], 10)
+      : null;
+    const currentEnd = availabilityForm.horaFin
+      ? parseInt(availabilityForm.horaFin.split(':')[0], 10)
+      : null;
+
+    const newStart = isToday && currentStart !== null && currentStart <= currentHour ? '' : availabilityForm.horaInicio;
+    const newEnd = newStart === '' ? '' : (currentEnd !== null && currentStart !== null && currentEnd <= parseInt((newStart || '0').split(':')[0], 10)) ? '' : availabilityForm.horaFin;
+
+    setAvailabilityForm({ fecha: validDate, horaInicio: newStart, horaFin: newEnd });
+    setAvailabilityResult(null);
+  };
+
+  const handleStartChange = (newStart) => {
+    const startHour = newStart ? parseInt(newStart.split(':')[0], 10) : null;
+    const endHour = availabilityForm.horaFin ? parseInt(availabilityForm.horaFin.split(':')[0], 10) : null;
+    const newEnd = endHour !== null && startHour !== null && endHour <= startHour ? '' : availabilityForm.horaFin;
+    setAvailabilityForm({ ...availabilityForm, horaInicio: newStart, horaFin: newEnd });
+  };
+
   const openModal = (space) => {
     setSelectedSpace(space);
     setAvailabilityResult(null);
     setModalMessage({ type: '', text: '' });
     setAvailabilityForm({
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: todayStr,
       horaInicio: '',
       horaFin: ''
     });
@@ -179,7 +225,7 @@ const Dashboard = () => {
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-xl leading-tight line-clamp-1">{space.nombre}</CardTitle>
                   <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
-                    {space.tipo}
+                    {t(`admin.spaceTypes.${space.tipo}`, space.tipo)}
                   </span>
                 </div>
                 <CardDescription className="line-clamp-2 mt-2 leading-relaxed">
@@ -264,7 +310,7 @@ const Dashboard = () => {
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">{selectedSpace?.nombre}</h3>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-                    <span>{selectedSpace?.tipo}</span>
+                    <span>{t(`admin.spaceTypes.${selectedSpace?.tipo}`, selectedSpace?.tipo)}</span>
                     <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-zinc-600" />
                     <span>{selectedSpace?.capacidad} {t('dashboard.capacityDesc')}</span>
                     <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-zinc-600" />
@@ -283,9 +329,10 @@ const Dashboard = () => {
                       <Input 
                         id="fecha" 
                         type="date" 
-                        min={new Date().toISOString().split('T')[0]}
+                        min={todayStr}
                         value={availabilityForm.fecha}
-                        onChange={e => setAvailabilityForm({...availabilityForm, fecha: e.target.value})}
+                        onChange={e => handleDateChange(e.target.value)}
+                        onKeyDown={e => e.preventDefault()}
                         required
                       />
                     </div>
@@ -295,14 +342,13 @@ const Dashboard = () => {
                         id="horaIni" 
                         className={selectClasses}
                         value={availabilityForm.horaInicio}
-                        onChange={e => setAvailabilityForm({...availabilityForm, horaInicio: e.target.value})}
+                        onChange={e => handleStartChange(e.target.value)}
                         required
                       >
                         <option value="">--:--</option>
-                        {[...Array(14)].map((_, i) => {
-                          const hour = String(i + 7).padStart(2, '0') + ':00';
-                          return <option key={hour} value={hour}>{hour}</option>;
-                        })}
+                        {getStartHourOptions().map(hour => (
+                          <option key={hour} value={hour}>{hour}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -315,10 +361,9 @@ const Dashboard = () => {
                         required
                       >
                         <option value="">--:--</option>
-                        {[...Array(14)].map((_, i) => {
-                          const hour = String(i + 8).padStart(2, '0') + ':00';
-                          return <option key={hour} value={hour}>{hour}</option>;
-                        })}
+                        {getEndHourOptions().map(hour => (
+                          <option key={hour} value={hour}>{hour}</option>
+                        ))}
                       </select>
                     </div>
                   </div>

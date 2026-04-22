@@ -95,6 +95,12 @@ const resources = {
           priceLabel: "Precio / hr ($)",
           noData: "No hay espacios registrados."
         },
+        spaceTypes: {
+          "Escritorio": "Escritorio",
+          "Oficina Privada": "Oficina Privada",
+          "Sala de Reuniones": "Sala de Reuniones",
+          "Sala de Eventos": "Sala de Eventos"
+        },
         users: {
           title: "Gestión de Usuarios",
           desc: "Verifica cuentas, asigna roles y administra el acceso al sistema.",
@@ -269,6 +275,12 @@ const resources = {
           capLabel: "Capacity",
           priceLabel: "Price / hr ($)",
           noData: "No spaces registered."
+        },
+        spaceTypes: {
+          "Escritorio": "Desk",
+          "Oficina Privada": "Private Office",
+          "Sala de Reuniones": "Meeting Room",
+          "Sala de Eventos": "Event Hall"
         },
         users: {
           title: "User Management",

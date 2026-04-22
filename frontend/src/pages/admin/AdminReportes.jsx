@@ -3,14 +3,15 @@ import { fetchApi } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/Card';
 import { Button, Input, Label } from '../../components/ui/Forms';
-import { PieChart, Download, Activity, Clock, DollarSign, ListChecks } from 'lucide-react';
+import { PieChart, Activity, Clock, DollarSign, ListChecks } from 'lucide-react';
 import { cn } from '../../utils/utils';
 
 const AdminReportes = () => {
   const { t } = useTranslation();
   const [params, setParams] = useState({
-    fechaInicio: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0], // 1 month ago
-    fechaFin: new Date().toISOString().split('T')[0] // Today
+    fechaInicio: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+    fechaFin: new Date().toISOString().split('T')[0],
+    estado: 'CONFIRMADA'
   });
   
   const [reportData, setReportData] = useState(null);
@@ -23,16 +24,55 @@ const AdminReportes = () => {
 
     try {
       setLoading(true);
+      setError('');
       const query = new URLSearchParams(params).toString();
       const res = await fetchApi(`/api/admin/reportes/ocupacion?${query}`);
-      setReportData(res);
-      setError('');
+      
+      // Backend returns { pagina: { content: [...items] }, resumen: { totalReservas, ... } }
+      const items = res.pagina?.content || [];
+      const resumen = res.resumen || {};
+
+      // Aggregate stats from items
+      const totalMinutos = items.reduce((sum, item) => sum + (item.duracionMinutos || 0), 0);
+      const horasTotales = totalMinutos / 60;
+
+      // Group by space for breakdown
+      const espacioMap = new Map();
+      items.forEach(item => {
+        const key = item.espacioId;
+        if (!espacioMap.has(key)) {
+          espacioMap.set(key, {
+            nombreEspacio: item.nombreEspacio,
+            tipoEspacio: item.tipoEspacio,
+            totalReservas: 0,
+            minutosReservados: 0,
+          });
+        }
+        const entry = espacioMap.get(key);
+        entry.totalReservas++;
+        entry.minutosReservados += (item.duracionMinutos || 0);
+      });
+
+      const desgloseEspacios = [...espacioMap.values()].map(es => ({
+        ...es,
+        horasReservadas: es.minutosReservados / 60,
+        porcentajeOcupacionRelativa: horasTotales > 0 ? (es.minutosReservados / totalMinutos) * 100 : 0
+      }));
+
+      setReportData({
+        totalReservas: resumen.totalReservas || items.length,
+        horasTotalesReservadas: horasTotales,
+        espaciosIncluidos: resumen.espaciosIncluidos || espacioMap.size,
+        desgloseEspacios
+      });
     } catch (err) {
-       setError(t('common.errorLoading'));
+       setError(err.message || t('common.errorLoading'));
     } finally {
       setLoading(false);
     }
   };
+
+  const selectClasses = "flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-primary/30 shadow-sm transition-colors";
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -63,6 +103,19 @@ const AdminReportes = () => {
               required
             />
           </div>
+          <div className="space-y-2 w-full sm:w-auto">
+            <Label htmlFor="estado">{t('myReservations.status')}</Label>
+            <select
+              id="estado"
+              className={selectClasses}
+              value={params.estado}
+              onChange={e => setParams({...params, estado: e.target.value})}
+            >
+              <option value="CONFIRMADA">{t('myReservations.statusConfirmed')}</option>
+              <option value="FINALIZADA">{t('myReservations.statusFinalized')}</option>
+              <option value="CANCELADA">{t('myReservations.statusCancelled')}</option>
+            </select>
+          </div>
           <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-2">
             <PieChart className="h-4 w-4" />
             {loading ? t('admin.reports.generating') : t('admin.reports.generate')}
@@ -79,7 +132,7 @@ const AdminReportes = () => {
       {reportData && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
            {/* Top Metrics */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="bg-slate-50 dark:bg-zinc-900 border-none shadow-sm ring-1 ring-slate-100 dark:ring-zinc-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between space-x-2">
@@ -115,22 +168,6 @@ const AdminReportes = () => {
             <Card className="bg-slate-50 dark:bg-zinc-900 border-none shadow-sm ring-1 ring-slate-100 dark:ring-zinc-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between space-x-2">
-                  <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 truncate">{t('admin.reports.revenue')}</p>
-                  <div className="p-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md">
-                    <DollarSign className="h-4 w-4" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-                    ${reportData.ingresosEstimados?.toLocaleString() || 0}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-             <Card className="bg-slate-50 dark:bg-zinc-900 border-none shadow-sm ring-1 ring-slate-100 dark:ring-zinc-800">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between space-x-2">
                   <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 truncate">{t('admin.reports.avgOcc')}</p>
                   <div className="p-2 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-md">
                     <Activity className="h-4 w-4" />
@@ -138,8 +175,9 @@ const AdminReportes = () => {
                 </div>
                 <div className="mt-4">
                   <span className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-                    {(reportData.ocupacionPromedioGlobal || 0).toFixed(1)}%
+                    {reportData.espaciosIncluidos}
                   </span>
+                  <span className="text-sm text-slate-500 dark:text-zinc-400 ml-1">espacios</span>
                 </div>
               </CardContent>
             </Card>
@@ -158,9 +196,9 @@ const AdminReportes = () => {
                     <thead className="bg-slate-50 font-medium text-slate-700 dark:bg-zinc-900 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
                       <tr>
                         <th scope="col" className="px-4 py-3">Espacio</th>
+                        <th scope="col" className="px-4 py-3">Tipo</th>
                         <th scope="col" className="px-4 py-3">Reservas</th>
                         <th scope="col" className="px-4 py-3">Horas</th>
-                        <th scope="col" className="px-4 py-3">Ingresos ($)</th>
                         <th scope="col" className="px-4 py-3 text-right">Ocupación Relativa</th>
                       </tr>
                     </thead>
@@ -168,9 +206,9 @@ const AdminReportes = () => {
                       {reportData.desgloseEspacios.map((es, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-zinc-900/50">
                           <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{es.nombreEspacio}</td>
+                          <td className="px-4 py-3">{es.tipoEspacio}</td>
                           <td className="px-4 py-3">{es.totalReservas}</td>
                           <td className="px-4 py-3">{es.horasReservadas.toFixed(1)}</td>
-                          <td className="px-4 py-3">${es.ingresosGenerados.toLocaleString()}</td>
                           <td className="px-4 py-3 text-right">
                              <div className="flex items-center justify-end gap-2">
                                 <span className="font-semibold">{(es.porcentajeOcupacionRelativa || 0).toFixed(1)}%</span>

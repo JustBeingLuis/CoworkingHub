@@ -26,19 +26,21 @@ const AdminReservas = () => {
     fecha: new Date().toISOString().split('T')[0], 
     horaInicio: '', 
     horaFin: '',
-    estado: 'CONFIRMADA' 
+    estadoId: '' 
   });
   const [saving, setSaving] = useState(false);
 
-  // References for dropdowns
-  const [users, setUsers] = useState([]);
-  const [spaces, setSpaces] = useState([]);
+  // Reference data for dropdowns (from dedicated admin endpoints)
+  const [users, setUsers] = useState([]);     // UsuarioReservaOptionResponse: { id, nombre, correo }
+  const [spaces, setSpaces] = useState([]);   // EspacioReporteOptionResponse: { id, nombre, tipoNombre }
+  const [estados, setEstados] = useState([]); // EstadoReservaOptionResponse: { id, nombre }
 
   const loadReservations = async (page = 0) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), size: String(RESERVATIONS_PAGE_SIZE) });
       const res = await fetchApi(`/api/admin/reservas?${params.toString()}`);
+      // Backend returns ReservaAdminListadoResponse: { pagina: { content, pageNumber, ... }, resumen: { ... } }
       setData(res.pagina || { content: [], pageNumber: 0, totalPages: 0, totalElements: 0 });
     } catch (err) {
       setError(t('common.errorLoading'));
@@ -49,13 +51,14 @@ const AdminReservas = () => {
 
   const loadReferences = async () => {
     try {
-      // Fetch users and spaces without pagination for dropdowns (in a real app, use search/autocomplete)
-      const [uRes, sRes] = await Promise.all([
-        fetchApi('/api/admin/usuarios?size=100'),
-        fetchApi('/api/admin/espacios?size=100')
+      const [uRes, sRes, eRes] = await Promise.all([
+        fetchApi('/api/admin/reservas/usuarios'),
+        fetchApi('/api/admin/reservas/espacios'),
+        fetchApi('/api/admin/reservas/estados')
       ]);
-      setUsers(uRes.pagina?.content || []);
-      setSpaces(sRes.pagina?.content || []);
+      setUsers(uRes || []);
+      setSpaces(sRes || []);
+      setEstados(eRes || []);
     } catch (err) {
       console.error(err);
     }
@@ -68,15 +71,23 @@ const AdminReservas = () => {
 
   const openNewForm = () => {
     setIsNew(true);
+    // Default to first available option for each dropdown
+    const defaultEstado = estados.find(e => e.nombre === 'CONFIRMADA')?.id || estados[0]?.id || '';
     setFormData({ 
-      id: null, usuarioId: users[0]?.id || '', espacioId: spaces[0]?.id || '', 
-      fecha: new Date().toISOString().split('T')[0], horaInicio: '', horaFin: '', estado: 'CONFIRMADA'
+      id: null, 
+      usuarioId: users[0]?.id || '', 
+      espacioId: spaces[0]?.id || '', 
+      fecha: new Date().toISOString().split('T')[0], 
+      horaInicio: '', 
+      horaFin: '', 
+      estadoId: defaultEstado
     });
     setIsFormOpen(true);
   };
 
   const openEditForm = (reserva) => {
     setIsNew(false);
+    // ReservaAdminResponse has: id, usuarioId, espacioId, fecha, horaInicio, horaFin, estadoId, estado
     setFormData({ 
       id: reserva.id,
       usuarioId: reserva.usuarioId, 
@@ -84,7 +95,7 @@ const AdminReservas = () => {
       fecha: reserva.fecha, 
       horaInicio: reserva.horaInicio?.slice(0,5) || '', 
       horaFin: reserva.horaFin?.slice(0,5) || '',
-      estado: reserva.estado
+      estadoId: reserva.estadoId
     });
     setIsFormOpen(true);
   };
@@ -95,17 +106,17 @@ const AdminReservas = () => {
       setSaving(true);
       const url = isNew ? '/api/admin/reservas' : `/api/admin/reservas/${formData.id}`;
       const method = isNew ? 'POST' : 'PUT';
-      
-      const payload = { ...formData };
-      if (isNew) delete payload.id;
 
+      // Backend expects ReservaAdminRequest: { usuarioId (Long), espacioId (Long), estadoId (Long), fecha, horaInicio, horaFin }
       await fetchApi(url, {
         method,
         body: JSON.stringify({
-          ...payload,
-          // Format times for backend
-          horaInicio: payload.horaInicio.length === 5 ? payload.horaInicio + ":00" : payload.horaInicio,
-          horaFin: payload.horaFin.length === 5 ? payload.horaFin + ":00" : payload.horaFin,
+          usuarioId: Number(formData.usuarioId),
+          espacioId: Number(formData.espacioId),
+          estadoId: Number(formData.estadoId),
+          fecha: formData.fecha,
+          horaInicio: formData.horaInicio.length === 5 ? formData.horaInicio + ":00" : formData.horaInicio,
+          horaFin: formData.horaFin.length === 5 ? formData.horaFin + ":00" : formData.horaFin,
         })
       });
       
@@ -117,6 +128,8 @@ const AdminReservas = () => {
       setSaving(false);
     }
   };
+
+  const selectClasses = "flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-slate-500";
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -152,7 +165,7 @@ const AdminReservas = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                 {data.content.map(res => (
                   <tr key={res.id} className="hover:bg-slate-50 dark:hover:bg-zinc-900/50">
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{res.nombreUsuario}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{res.usuarioNombre}</td>
                     <td className="px-6 py-4">{res.nombreEspacio}</td>
                     <td className="px-6 py-4">{format(res.fecha)}</td>
                     <td className="px-6 py-4">{res.horaInicio?.slice(0,5)} - {res.horaFin?.slice(0,5)}</td>
@@ -177,6 +190,13 @@ const AdminReservas = () => {
                     </td>
                   </tr>
                 ))}
+                {data.content.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
+                      {t('admin.reservations.noData')}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -201,7 +221,7 @@ const AdminReservas = () => {
               <Label htmlFor="usuarioId">{t('admin.reservations.userLabel')}</Label>
               <select 
                 id="usuarioId" 
-                className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-zinc-700 dark:focus:ring-slate-500"
+                className={selectClasses}
                 value={formData.usuarioId}
                 onChange={e => setFormData({...formData, usuarioId: e.target.value})}
                 required
@@ -216,13 +236,13 @@ const AdminReservas = () => {
             <Label htmlFor="espacioId">{t('admin.reservations.spaceLabel')}</Label>
              <select 
               id="espacioId" 
-              className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-zinc-700 dark:focus:ring-slate-500"
+              className={selectClasses}
               value={formData.espacioId}
               onChange={e => setFormData({...formData, espacioId: e.target.value})}
               required
             >
               <option value="" disabled className="dark:bg-zinc-900">Seleccionar...</option>
-              {spaces.map(s => <option key={s.id} value={s.id} className="dark:bg-zinc-900">{s.nombre}</option>)}
+              {spaces.map(s => <option key={s.id} value={s.id} className="dark:bg-zinc-900">{s.nombre} ({t(`admin.spaceTypes.${s.tipoNombre}`, s.tipoNombre)})</option>)}
             </select>
           </div>
 
@@ -235,14 +255,13 @@ const AdminReservas = () => {
               <Label htmlFor="estado">{t('admin.reservations.statusLabel')}</Label>
                <select 
                 id="estado" 
-                className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-zinc-700 dark:focus:ring-slate-500"
-                value={formData.estado}
-                onChange={e => setFormData({...formData, estado: e.target.value})}
+                className={selectClasses}
+                value={formData.estadoId}
+                onChange={e => setFormData({...formData, estadoId: e.target.value})}
                 required
               >
-                <option value="CONFIRMADA" className="dark:bg-zinc-900">{t('myReservations.statusConfirmed')}</option>
-                <option value="CANCELADA" className="dark:bg-zinc-900">{t('myReservations.statusCancelled')}</option>
-                <option value="FINALIZADA" className="dark:bg-zinc-900">{t('myReservations.statusFinalized')}</option>
+                <option value="" disabled className="dark:bg-zinc-900">Seleccionar...</option>
+                {estados.map(e => <option key={e.id} value={e.id} className="dark:bg-zinc-900">{e.nombre}</option>)}
               </select>
             </div>
           </div>

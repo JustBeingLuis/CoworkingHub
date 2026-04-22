@@ -460,6 +460,20 @@ public class ReservaService implements IReservaService {
         if (!reservaCreateRequest.getHoraInicio().isBefore(reservaCreateRequest.getHoraFin())) {
             throw new IllegalArgumentException("La hora de inicio debe ser anterior a la hora de fin.");
         }
+
+        LocalDate hoy = LocalDate.now(getBusinessZoneId());
+        if (reservaCreateRequest.getFecha().isEqual(hoy)) {
+            java.time.LocalTime ahoraHora = java.time.LocalTime.now(getBusinessZoneId());
+            if (reservaCreateRequest.getHoraInicio().isBefore(ahoraHora)) {
+                throw new IllegalArgumentException(
+                        "No puedes reservar para una hora que ya paso. Selecciona una hora posterior a la actual."
+                );
+            }
+        }
+
+        if (reservaCreateRequest.getFecha().isBefore(hoy)) {
+            throw new IllegalArgumentException("No puedes crear una reserva para una fecha pasada.");
+        }
     }
 
     private void validarReservaAdmin(ReservaAdminRequest reservaAdminRequest) {
