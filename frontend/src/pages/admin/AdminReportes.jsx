@@ -5,18 +5,18 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../..
 import { Button, Input, Label } from '../../components/ui/Forms';
 import { PieChart, Activity, Clock, ListChecks } from 'lucide-react';
 
-const DEFAULT_REPORT_PAGE_SIZE = 2000;
+const SPACES_PAGE_SIZE = 10;
 
 const AdminReportes = () => {
   const { t } = useTranslation();
   const [params, setParams] = useState({
     fechaInicio: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
     fechaFin: new Date().toISOString().split('T')[0],
-    estado: 'CONFIRMADA',
-    size: DEFAULT_REPORT_PAGE_SIZE
+    estado: 'CONFIRMADA'
   });
   
   const [reportData, setReportData] = useState(null);
+  const [spacePage, setSpacePage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,7 +27,6 @@ const AdminReportes = () => {
     try {
       setLoading(true);
       setError('');
-      const pageSize = Math.max(1, Number(params.size) || DEFAULT_REPORT_PAGE_SIZE);
       const allItems = [];
       let page = 0;
       let lastPage = {};
@@ -39,7 +38,7 @@ const AdminReportes = () => {
           fechaFin: params.fechaFin,
           estado: params.estado,
           page: String(page),
-          size: String(pageSize)
+          size: String(SPACES_PAGE_SIZE)
         }).toString();
 
         const res = await fetchApi(`/api/admin/reportes/ocupacion?${query}`);
@@ -88,12 +87,11 @@ const AdminReportes = () => {
         horasTotalesReservadas: horasTotales,
         espaciosIncluidos: resumen.espaciosIncluidos || espacioMap.size,
         desgloseEspacios,
-        pageNumber: 0,
-        pageSize,
         numberOfElements: items.length,
         totalPages: lastPage.totalPages || 0,
         totalElements: lastPage.totalElements ?? resumen.totalReservas ?? items.length
       });
+      setSpacePage(0);
     } catch (err) {
        setError(err.message || t('common.errorLoading'));
     } finally {
@@ -102,6 +100,13 @@ const AdminReportes = () => {
   };
 
   const selectClasses = "flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-primary/30 shadow-sm transition-colors";
+  const totalSpacePages = reportData?.desgloseEspacios?.length
+    ? Math.ceil(reportData.desgloseEspacios.length / SPACES_PAGE_SIZE)
+    : 0;
+  const visibleSpaces = reportData?.desgloseEspacios?.slice(
+    spacePage * SPACES_PAGE_SIZE,
+    spacePage * SPACES_PAGE_SIZE + SPACES_PAGE_SIZE
+  ) || [];
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -144,18 +149,6 @@ const AdminReportes = () => {
               <option value="FINALIZADA">{t('myReservations.statusFinalized')}</option>
               <option value="CANCELADA">{t('myReservations.statusCancelled')}</option>
             </select>
-          </div>
-          <div className="space-y-2 w-full sm:w-32">
-            <Label htmlFor="size">Registros por pagina</Label>
-            <Input
-              id="size"
-              type="number"
-              min="1"
-              step="1"
-              value={params.size}
-              onChange={e => setParams({...params, size: e.target.value})}
-              required
-            />
           </div>
           <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-2">
             <PieChart className="h-4 w-4" />
@@ -232,7 +225,7 @@ const AdminReportes = () => {
                 {t('admin.reports.breakdownDesc')}
                 {reportData.totalElements > 0 && (
                   <span className="block mt-1">
-                    Mostrando {reportData.numberOfElements} de {reportData.totalElements} registros
+                    Total: {reportData.totalElements} registros dentro del intervalo seleccionado
                   </span>
                 )}
               </CardDescription>
@@ -251,8 +244,8 @@ const AdminReportes = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                      {reportData.desgloseEspacios.map((es, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-zinc-900/50">
+                      {visibleSpaces.map((es, idx) => (
+                        <tr key={`${es.nombreEspacio}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-zinc-900/50">
                           <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{es.nombreEspacio}</td>
                           <td className="px-4 py-3">{es.tipoEspacio}</td>
                           <td className="px-4 py-3">{es.totalReservas}</td>
@@ -272,6 +265,29 @@ const AdminReportes = () => {
                       ))}
                     </tbody>
                   </table>
+                  {totalSpacePages > 1 && (
+                    <div className="flex items-center justify-between border-t border-slate-200 p-4 dark:border-zinc-800">
+                      <p className="text-sm text-slate-500">
+                        {t('common.page')} {spacePage + 1} {t('common.of')} {totalSpacePages}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          disabled={spacePage === 0}
+                          onClick={() => setSpacePage(page => Math.max(0, page - 1))}
+                        >
+                          {t('common.previous')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={spacePage >= totalSpacePages - 1}
+                          onClick={() => setSpacePage(page => Math.min(totalSpacePages - 1, page + 1))}
+                        >
+                          {t('common.next')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="py-8 text-center border border-dashed rounded-md text-slate-500">
