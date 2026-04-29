@@ -3,17 +3,17 @@ import { fetchApi } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/Card';
 import { Button, Input, Label } from '../../components/ui/Forms';
-import { PieChart, Activity, Clock, DollarSign, ListChecks } from 'lucide-react';
-import { cn } from '../../utils/utils';
+import { PieChart, Activity, Clock, ListChecks } from 'lucide-react';
 
-const REPORT_MAX_SIZE = 2000;
+const DEFAULT_REPORT_PAGE_SIZE = 2000;
 
 const AdminReportes = () => {
   const { t } = useTranslation();
   const [params, setParams] = useState({
     fechaInicio: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
     fechaFin: new Date().toISOString().split('T')[0],
-    estado: 'CONFIRMADA'
+    estado: 'CONFIRMADA',
+    size: DEFAULT_REPORT_PAGE_SIZE
   });
   
   const [reportData, setReportData] = useState(null);
@@ -27,16 +27,30 @@ const AdminReportes = () => {
     try {
       setLoading(true);
       setError('');
-      const query = new URLSearchParams({
-        ...params,
-        page: '0',
-        size: String(REPORT_MAX_SIZE)
-      }).toString();
-      const res = await fetchApi(`/api/admin/reportes/ocupacion?${query}`);
+      const pageSize = Math.max(1, Number(params.size) || DEFAULT_REPORT_PAGE_SIZE);
+      const allItems = [];
+      let page = 0;
+      let lastPage = {};
+      let resumen = {};
+
+      do {
+        const query = new URLSearchParams({
+          fechaInicio: params.fechaInicio,
+          fechaFin: params.fechaFin,
+          estado: params.estado,
+          page: String(page),
+          size: String(pageSize)
+        }).toString();
+
+        const res = await fetchApi(`/api/admin/reportes/ocupacion?${query}`);
+        lastPage = res.pagina || {};
+        resumen = res.resumen || resumen;
+        allItems.push(...(lastPage.content || []));
+        page += 1;
+      } while (!lastPage.last && page < (lastPage.totalPages || page));
       
       // Backend returns { pagina: { content: [...items] }, resumen: { totalReservas, ... } }
-      const items = res.pagina?.content || [];
-      const resumen = res.resumen || {};
+      const items = allItems;
 
       // Aggregate stats from items
       const totalMinutos = items.reduce((sum, item) => {
@@ -70,10 +84,15 @@ const AdminReportes = () => {
       }));
 
       setReportData({
-        totalReservas: resumen.totalReservas || items.length,
+        totalReservas: resumen.totalReservas ?? lastPage.totalElements ?? items.length,
         horasTotalesReservadas: horasTotales,
         espaciosIncluidos: resumen.espaciosIncluidos || espacioMap.size,
-        desgloseEspacios
+        desgloseEspacios,
+        pageNumber: 0,
+        pageSize,
+        numberOfElements: items.length,
+        totalPages: lastPage.totalPages || 0,
+        totalElements: lastPage.totalElements ?? resumen.totalReservas ?? items.length
       });
     } catch (err) {
        setError(err.message || t('common.errorLoading'));
@@ -125,6 +144,18 @@ const AdminReportes = () => {
               <option value="FINALIZADA">{t('myReservations.statusFinalized')}</option>
               <option value="CANCELADA">{t('myReservations.statusCancelled')}</option>
             </select>
+          </div>
+          <div className="space-y-2 w-full sm:w-32">
+            <Label htmlFor="size">Registros por pagina</Label>
+            <Input
+              id="size"
+              type="number"
+              min="1"
+              step="1"
+              value={params.size}
+              onChange={e => setParams({...params, size: e.target.value})}
+              required
+            />
           </div>
           <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-2">
             <PieChart className="h-4 w-4" />
@@ -197,7 +228,14 @@ const AdminReportes = () => {
           <Card>
             <CardHeader>
               <CardTitle>{t('admin.reports.breakdownTitle')}</CardTitle>
-              <CardDescription>{t('admin.reports.breakdownDesc')}</CardDescription>
+              <CardDescription>
+                {t('admin.reports.breakdownDesc')}
+                {reportData.totalElements > 0 && (
+                  <span className="block mt-1">
+                    Mostrando {reportData.numberOfElements} de {reportData.totalElements} registros
+                  </span>
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {reportData.desgloseEspacios?.length > 0 ? (
