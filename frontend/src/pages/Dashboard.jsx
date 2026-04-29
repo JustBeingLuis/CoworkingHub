@@ -405,6 +405,11 @@ const Dashboard = () => {
                   </div>
                 )}
 
+                <div className="flex items-start gap-3 rounded-lg bg-amber-50 p-3.5 border border-amber-200/50 dark:bg-amber-950/20 dark:border-amber-900/30">
+                  <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700 dark:text-amber-300">{t('dashboard.cancelPolicyNote')}</p>
+                </div>
+
                 {/* Actions */}
                 <div className="flex gap-3 pt-3 border-t border-slate-200 dark:border-zinc-800">
                   <Button type="submit" variant="outline" disabled={checkingAvailability} className="flex-1 h-11">

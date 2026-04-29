@@ -60,7 +60,8 @@ const resources = {
         confirmText: "Confirmar Reserva",
         total: "Total estimado:",
         bookingSuccess: "Reserva creada exitosamente",
-        bookingSuccessDesc: "Tu espacio ha sido reservado. Puedes verlo en Mis Reservas."
+        bookingSuccessDesc: "Tu espacio ha sido reservado. Puedes verlo en Mis Reservas.",
+        cancelPolicyNote: "Las cancelaciones solo se permiten con al menos 6 horas de anticipación a la hora de inicio."
       },
       myReservations: {
         title: "Mis Reservas",
@@ -73,6 +74,7 @@ const resources = {
         cancelBtn: "Cancelar Reserva",
         cancelConfirm: "¿Seguro que deseas cancelar esta reserva?",
         cancelSuccess: "Reserva cancelada correctamente.",
+        cancelPolicyNote: "Solo puedes cancelar con al menos 6 horas de anticipación a la hora de inicio.",
         statusConfirmed: "Confirmada",
         statusCancelled: "Cancelada",
         statusFinalized: "Finalizada"
@@ -249,7 +251,8 @@ const resources = {
         confirmText: "Confirm Booking",
         total: "Estimated total:",
         bookingSuccess: "Booking created successfully",
-        bookingSuccessDesc: "Your space has been reserved. You can view it in My Bookings."
+        bookingSuccessDesc: "Your space has been reserved. You can view it in My Bookings.",
+        cancelPolicyNote: "Cancellations are only allowed at least 6 hours before the start time."
       },
       myReservations: {
         title: "My Bookings",
@@ -262,6 +265,7 @@ const resources = {
         cancelBtn: "Cancel Booking",
         cancelConfirm: "Are you sure you want to cancel this booking?",
         cancelSuccess: "Booking cancelled successfully.",
+        cancelPolicyNote: "You can only cancel at least 6 hours before the start time.",
         statusConfirmed: "Confirmed",
         statusCancelled: "Cancelled",
         statusFinalized: "Completed"

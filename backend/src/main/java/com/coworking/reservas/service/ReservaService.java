@@ -590,6 +590,11 @@ public class ReservaService implements IReservaService {
     }
 
     private ReporteOcupacionItemResponse mapToReporteOcupacionItemResponse(Reserva reserva) {
+                long duracionMinutos = Duration.between(reserva.getHoraInicio(), reserva.getHoraFin()).toMinutes();
+                if (duracionMinutos < 0) {
+                        duracionMinutos = 0;
+                }
+
         return new ReporteOcupacionItemResponse(
                 reserva.getId(),
                 reserva.getEspacio().getId(),
@@ -603,7 +608,7 @@ public class ReservaService implements IReservaService {
                 reserva.getHoraFin(),
                 reserva.getFechaCreacion(),
                 reserva.getEstado().getNombre(),
-                Duration.between(reserva.getHoraInicio(), reserva.getHoraFin()).toMinutes()
+                                duracionMinutos
         );
     }
 

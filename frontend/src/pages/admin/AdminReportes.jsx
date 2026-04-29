@@ -6,6 +6,8 @@ import { Button, Input, Label } from '../../components/ui/Forms';
 import { PieChart, Activity, Clock, DollarSign, ListChecks } from 'lucide-react';
 import { cn } from '../../utils/utils';
 
+const REPORT_MAX_SIZE = 2000;
+
 const AdminReportes = () => {
   const { t } = useTranslation();
   const [params, setParams] = useState({
@@ -25,7 +27,11 @@ const AdminReportes = () => {
     try {
       setLoading(true);
       setError('');
-      const query = new URLSearchParams(params).toString();
+      const query = new URLSearchParams({
+        ...params,
+        page: '0',
+        size: String(REPORT_MAX_SIZE)
+      }).toString();
       const res = await fetchApi(`/api/admin/reportes/ocupacion?${query}`);
       
       // Backend returns { pagina: { content: [...items] }, resumen: { totalReservas, ... } }
@@ -33,7 +39,10 @@ const AdminReportes = () => {
       const resumen = res.resumen || {};
 
       // Aggregate stats from items
-      const totalMinutos = items.reduce((sum, item) => sum + (item.duracionMinutos || 0), 0);
+      const totalMinutos = items.reduce((sum, item) => {
+        const minutos = Math.max(0, item.duracionMinutos || 0);
+        return sum + minutos;
+      }, 0);
       const horasTotales = totalMinutos / 60;
 
       // Group by space for breakdown
@@ -49,8 +58,9 @@ const AdminReportes = () => {
           });
         }
         const entry = espacioMap.get(key);
+        const minutos = Math.max(0, item.duracionMinutos || 0);
         entry.totalReservas++;
-        entry.minutosReservados += (item.duracionMinutos || 0);
+        entry.minutosReservados += minutos;
       });
 
       const desgloseEspacios = [...espacioMap.values()].map(es => ({

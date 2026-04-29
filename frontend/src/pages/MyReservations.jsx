@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Forms';
 import { format } from '../utils/dateUtils';
-import { CalendarX2, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CalendarX2, CheckCircle2 } from 'lucide-react';
 import { cn } from '../utils/utils';
 
 const RESERVATIONS_PAGE_SIZE = 10;
@@ -52,6 +52,11 @@ const MyReservations = () => {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">{t('myReservations.title')}</h2>
         <p className="text-slate-500 dark:text-zinc-400">{t('myReservations.desc')}</p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300">
+        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+        <p className="text-sm font-medium">{t('myReservations.cancelPolicyNote')}</p>
       </div>
 
       {/* Inline Feedback */}
