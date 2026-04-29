@@ -153,7 +153,7 @@ const resources = {
           totalRes: "Total Reservas",
           totalHours: "Horas Reservadas",
           revenue: "Ingresos Generados",
-          avgOcc: "Ocupación Promedio",
+          avgOcc: "Ocupación",
           breakdownTitle: "Ocupación por Espacio",
           breakdownDesc: "Desglose de rendimiento por cada espacio del coworking.",
           noData: "No hay datos de espacios para este periodo."
