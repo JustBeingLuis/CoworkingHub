@@ -15,6 +15,7 @@ import com.coworking.reservas.dto.UsuarioAdminSummaryResponse;
 import com.coworking.reservas.dto.UsuarioRegistroRequest;
 import com.coworking.reservas.dto.UsuarioResponse;
 import com.coworking.reservas.exception.ResourceNotFoundException;
+import com.coworking.reservas.repository.ReservaRepository;
 import com.coworking.reservas.repository.RolRepository;
 import com.coworking.reservas.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ public class UsuarioService implements IUsuarioService {
 
     @Autowired
     private RolRepository rolRepository;
+
+    @Autowired
+    private ReservaRepository reservaRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -180,6 +184,28 @@ public class UsuarioService implements IUsuarioService {
         usuario.setActivo(activo);
 
         return mapToAdminResponse(usuarioRepository.save(usuario));
+    }
+
+    @Override
+    public void eliminarUsuarioComoAdministrador(Long usuarioId, String correoAdminAutenticado) {
+        if (usuarioId == null) {
+            throw new IllegalArgumentException("El id del usuario es obligatorio.");
+        }
+
+        Usuario usuario = buscarUsuarioPorId(usuarioId);
+
+        if (correoAdminAutenticado != null
+                && usuario.getCorreo().equalsIgnoreCase(correoAdminAutenticado.trim())) {
+            throw new IllegalArgumentException("No puedes eliminar tu propia cuenta de administrador.");
+        }
+
+        if (reservaRepository.countByUsuarioId(usuarioId) > 0) {
+            throw new IllegalArgumentException(
+                    "No puedes eliminar un usuario con reservas asociadas. Desactiva la cuenta en su lugar."
+            );
+        }
+
+        usuarioRepository.delete(usuario);
     }
 
     @Override

@@ -143,6 +143,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
             """)
     long countReservasCanceladas();
 
+    long countByUsuarioId(Long usuarioId);
+
     @Query("""
             select r
             from Reserva r

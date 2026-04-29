@@ -26,5 +26,7 @@ public interface IUsuarioService {
 
     UsuarioAdminResponse actualizarEstadoUsuario(Long usuarioId, Boolean activo, String correoAdminAutenticado);
 
+    void eliminarUsuarioComoAdministrador(Long usuarioId, String correoAdminAutenticado);
+
     List<RolOptionResponse> consultarRolesParaAdministracion();
 }

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui/Card';
 import { Button, Input, Label } from '../../components/ui/Forms';
 import { Modal } from '../../components/ui/Modal';
-import { Edit } from 'lucide-react';
+import { Edit, Plus, Trash2 } from 'lucide-react';
 import { cn } from '../../utils/utils';
 
 const USERS_PAGE_SIZE = 10;
@@ -20,9 +20,16 @@ const AdminUsuarios = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [roles, setRoles] = useState([]); // Array of { id, nombre }
   const [saving, setSaving] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ nombre: '', correo: '', password: '', activo: true, rolId: '' });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const [toggleTarget, setToggleTarget] = useState(null);
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const loadUsers = async (page = 0) => {
     try {
@@ -65,6 +72,13 @@ const AdminUsuarios = () => {
     setIsEditOpen(true);
   };
 
+  const openCreateModal = () => {
+    const defaultRoleId = roles[0]?.id ? String(roles[0].id) : '';
+    setNewUser({ nombre: '', correo: '', password: '', activo: true, rolId: defaultRoleId });
+    setCreateError('');
+    setIsCreateOpen(true);
+  };
+
   const handleSaveUser = async (e) => {
     e.preventDefault();
     try {
@@ -85,6 +99,30 @@ const AdminUsuarios = () => {
       alert(err.message || 'Error saving user');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      setCreating(true);
+      setCreateError('');
+      await fetchApi('/api/admin/usuarios', {
+        method: 'POST',
+        body: JSON.stringify({
+          nombre: newUser.nombre,
+          correo: newUser.correo,
+          password: newUser.password,
+          activo: newUser.activo,
+          rolId: Number(newUser.rolId)
+        })
+      });
+      setIsCreateOpen(false);
+      loadUsers(data.pageNumber);
+    } catch (err) {
+      setCreateError(err.message || err.data?.message || 'Error creating user');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -117,13 +155,44 @@ const AdminUsuarios = () => {
     }
   };
 
+  const openDeleteModal = (user) => {
+    setDeleteTarget(user);
+    setDeleteError('');
+  };
+
+  const closeDeleteModal = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteError('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      await fetchApi(`/api/admin/usuarios/${deleteTarget.id}`, { method: 'DELETE' });
+      setDeleteTarget(null);
+      loadUsers(data.pageNumber);
+    } catch (err) {
+      setDeleteError(err.message || err.data?.message || 'Error deleting user');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const selectClasses = "flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-slate-500";
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">{t('admin.users.title')}</h2>
-        <p className="text-slate-500 dark:text-zinc-400">{t('admin.users.desc')}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">{t('admin.users.title')}</h2>
+          <p className="text-slate-500 dark:text-zinc-400">{t('admin.users.desc')}</p>
+        </div>
+        <Button onClick={openCreateModal} className="gap-2 shrink-0">
+          <Plus className="h-4 w-4" />
+          {t('admin.users.create')}
+        </Button>
       </div>
 
       {error ? (
@@ -163,17 +232,28 @@ const AdminUsuarios = () => {
                         {user.activo ? t('common.active') : t('common.inactive')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                       <Button variant="ghost" className="h-8 w-8 p-0" title={t('common.edit')} onClick={() => handleEditClick(user)}>
-                        <Edit className="h-4 w-4" />
-                       </Button>
-                       <Button 
-                        variant={user.activo ? "ghost" : "primary"} 
-                        className={cn("h-8 text-xs", user.activo && "text-red-600 hover:text-red-700 dark:text-red-400")}
-                        onClick={() => handleToggleEstado(user)}
-                       >
-                        {user.activo ? t('admin.users.deactivate') : t('admin.users.activate')}
-                       </Button>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" className="h-8 w-8 p-0" title={t('common.edit')} onClick={() => handleEditClick(user)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant={user.activo ? "ghost" : "primary"} 
+                          className={cn("h-8 text-xs", user.activo && "text-red-600 hover:text-red-700 dark:text-red-400")}
+                          onClick={() => handleToggleEstado(user)}
+                        >
+                          {user.activo ? t('admin.users.deactivate') : t('admin.users.activate')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300"
+                          title={t('admin.users.delete')}
+                          onClick={() => openDeleteModal(user)}
+                          disabled={deleting && deleteTarget?.id === user.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -214,6 +294,16 @@ const AdminUsuarios = () => {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="correo">{t('admin.users.emailLabel')}</Label>
+              <Input
+                id="correo"
+                type="email"
+                value={editingUser.correo}
+                onChange={e => setEditingUser({...editingUser, correo: e.target.value})}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="rol">{t('admin.users.roleLabel')}</Label>
               <select 
                 id="rol" 
@@ -233,6 +323,78 @@ const AdminUsuarios = () => {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Create Modal */}
+      <Modal isOpen={isCreateOpen} onClose={() => !creating && setIsCreateOpen(false)} title={t('admin.users.new')}>
+        <form onSubmit={handleCreateUser} className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label htmlFor="nuevoNombre">{t('admin.users.nameLabel')}</Label>
+            <Input
+              id="nuevoNombre"
+              value={newUser.nombre}
+              onChange={e => setNewUser(prev => ({...prev, nombre: e.target.value}))}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nuevoCorreo">{t('admin.users.emailLabel')}</Label>
+            <Input
+              id="nuevoCorreo"
+              type="email"
+              value={newUser.correo}
+              onChange={e => setNewUser(prev => ({...prev, correo: e.target.value}))}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nuevoPassword">{t('admin.users.passwordLabel')}</Label>
+            <Input
+              id="nuevoPassword"
+              type="password"
+              value={newUser.password}
+              onChange={e => setNewUser(prev => ({...prev, password: e.target.value}))}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="nuevoRol">{t('admin.users.roleLabel')}</Label>
+              <select
+                id="nuevoRol"
+                className={selectClasses}
+                value={newUser.rolId}
+                onChange={e => setNewUser(prev => ({...prev, rolId: e.target.value}))}
+                required
+              >
+                <option value="" disabled className="dark:bg-zinc-900">Seleccionar...</option>
+                {roles.map(r => <option key={r.id} value={r.id} className="dark:bg-zinc-900">{r.nombre}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nuevoEstado">{t('admin.users.statusLabel')}</Label>
+              <select
+                id="nuevoEstado"
+                className={selectClasses}
+                value={String(newUser.activo)}
+                onChange={e => setNewUser(prev => ({...prev, activo: e.target.value === 'true'}))}
+                required
+              >
+                <option value="true" className="dark:bg-zinc-900">{t('common.active')}</option>
+                <option value="false" className="dark:bg-zinc-900">{t('common.inactive')}</option>
+              </select>
+            </div>
+          </div>
+          {createError && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+              {createError}
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-4 mt-6 border-t border-slate-200 dark:border-zinc-800">
+            <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)} disabled={creating}>{t('common.cancel')}</Button>
+            <Button type="submit" disabled={creating}>{creating ? t('common.saving') : t('common.save')}</Button>
+          </div>
+        </form>
       </Modal>
 
       <Modal
@@ -269,6 +431,42 @@ const AdminUsuarios = () => {
               }
             >
               {toggling ? t('common.saving') : (toggleTarget?.activo ? t('admin.users.deactivate') : t('admin.users.activate'))}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={closeDeleteModal}
+        title={t('admin.users.delete')}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-zinc-400">
+            {t('admin.users.confirmDelete')}
+          </p>
+          {deleteTarget && (
+            <div className="rounded-lg border border-slate-200 p-3 text-sm text-slate-700 dark:border-zinc-800 dark:text-zinc-300">
+              <div className="font-semibold">{deleteTarget.nombre}</div>
+              <div className="text-xs text-slate-500 dark:text-zinc-400">{deleteTarget.correo}</div>
+            </div>
+          )}
+          {deleteError && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+              {deleteError}
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={closeDeleteModal} disabled={deleting}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? t('common.saving') : t('admin.users.delete')}
             </Button>
           </div>
         </div>
